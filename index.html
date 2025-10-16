@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0番通路 (最終更新版)</title>
+    <style>
+        /* --- Google Fonts --- */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Orbitron:wght@400;700&display=swap');
+
+        /* --- 基本設定 --- */
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: rgba(30, 30, 30, 0.9);
+            --border-color: #444;
+            --title-color: #e53935;
+            --message-color: #ffd700;
+            --normal-light-color: #f0f0c0;
+            --normal-sign-bg: #004d40;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Meiryo', 'Hiragino Kaku Gothic ProN', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 1s ease, filter 1s ease;
+        }
+
+        .game-wrapper {
+            position: relative;
+            max-width: 800px;
+            width: 90%;
+            padding: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--container-bg);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+            text-align: center;
+            z-index: 2;
+            overflow: hidden;
+            transition: border-color 0.5s ease, border-radius 0.5s, background-color 0.5s, transform 0.5s, box-shadow 0.5s;
+        }
+
+        /* --- 視覚的オブジェクト --- */
+        .ceiling-light {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%) perspective(100px) rotateX(45deg);
+            width: 50%;
+            height: 40px;
+            background: linear-gradient(#222, #333);
+            border: 2px solid #111;
+            transition: width 0.5s, border-radius 0.5s;
+        }
+
+        .ceiling-light::after {
+            content: '';
+            display: block;
+            width: 90%;
+            height: 80%;
+            margin: 5% auto;
+            background-color: var(--normal-light-color);
+            box-shadow: 0 0 15px 5px var(--normal-light-color);
+            transition: background-color 0.5s, box-shadow 0.5s, animation-duration 0.5s;
+            animation: light-hum 7s infinite alternate ease-in-out;
+        }
+
+        @keyframes light-hum {
+            from {
+                opacity: 0.95;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .wall-sign {
+            position: absolute;
+            top: 40%;
+            right: -20px;
+            transform: translateY(-50%) perspective(200px) rotateY(-30deg);
+            width: 100px;
+            height: 150px;
+            background-color: var(--normal-sign-bg);
+            border: 5px solid #ccc;
+            border-radius: 5px;
+            box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.5);
+            transition: transform 0.5s, background-color 0.5s, box-shadow 0.5s, opacity 0.5s, border-style 0.5s;
+        }
+
+        .wall-sign::before {
+            content: '非常口';
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: content 0.3s, font-family 0.3s, color 0.3s;
+        }
+
+        .poster {
+            position: absolute;
+            top: 50%;
+            left: -10px;
+            transform: translateY(-50%) perspective(200px) rotateY(25deg);
+            width: 90px;
+            height: 130px;
+            background-color: #f0ead6;
+            border: 3px solid #333;
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.5);
+            transition: transform 0.5s, background-color 0.5s, opacity 0.5s;
+        }
+
+        .poster::before {
+            content: '安全第一';
+            color: #333;
+            font-size: 20px;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: content 0.3s;
+        }
+
+        .floor {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 25%;
+            z-index: -1;
+            background:
+                linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.2)),
+                repeating-linear-gradient(45deg, #444, #444 10px, #555 10px, #555 20px);
+            transition: background 0.5s;
+        }
+
+        /* --- UI要素 --- */
+        h1 {
+            color: var(--title-color);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(229, 57, 53, 0.7);
+            transition: font-weight 0.5s, color 0.5s, text-shadow 0.5s;
+        }
+
+        #description {
+            font-size: 1.2em;
+            line-height: 1.8;
+            min-height: 150px;
+            white-space: pre-wrap;
+            margin-bottom: 30px;
+            transition: color 0.5s, font-family 0.8s, letter-spacing 0.5s, text-align 0.5s, transform 0.5s;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            transition: flex-direction 0.5s;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s, transform 0.1s, opacity 0.3s, color 0.3s, box-shadow 0.3s, border-radius 0.3s;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #45a049;
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        #back-button {
+            background-color: #f44336;
+        }
+
+        #back-button:hover:not(:disabled) {
+            background-color: #da190b;
+        }
+
+        #message {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: var(--message-color);
+            font-weight: bold;
+            height: 30px;
+            transition: opacity 0.5s, color 0.5s, border 0.5s;
+            box-sizing: border-box;
+        }
+
+        /* --- 暗転用オーバーレイ --- */
+        #fade-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            opacity: 0;
+            z-index: 9999;
+            pointer-events: none;
+            transition: opacity 1s ease-in-out;
+        }
+
+        #fade-overlay.is-active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* --- 追加オブジェクト --- */
+        .puddle {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            width: 100px;
+            height: 30px;
+            background: rgba(80, 120, 150, 0.3);
+            border-radius: 50%;
+            transform: translateX(-50%) perspective(50px) rotateX(60deg);
+            box-shadow: 0 0 10px rgba(80, 120, 150, 0.5);
+            display: none;
+        }
+
+        .anomaly-puddle .puddle {
+            display: block;
+        }
+
+        .crack {
+            position: absolute;
+            top: 20%;
+            left: 10%;
+            width: 5px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            transform: rotate(20deg);
+            display: none;
+        }
+
+        .crack::after {
+            content: '';
+            position: absolute;
+            top: 50px;
+            left: -30px;
+            width: 3px;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 50%;
+            transform: rotate(-40deg);
+        }
+
+        .anomaly-crack .crack {
+            display: block;
+        }
+
+        /* --- デバッグモード用スタイル --- */
+        #debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            z-index: 10000;
+            text-align: left;
+            display: none;
+        }
+
+        #debug-info h3 {
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #0f0;
+            color: #0f0;
+        }
+
+        #debug-info select,
+        #debug-info button {
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        /* --- 異変のスタイル --- */
+        .anomaly-light-red .ceiling-light::after {
+            background-color: #ff4d4d;
+            box-shadow: 0 0 20px 10px #ff4d4d;
+        }
+
+        .anomaly-light-flicker .ceiling-light::after {
+            animation: flicker 0.3s infinite alternate;
+        }
+
+        @keyframes flicker {
+            0% {
+                opacity: 1;
+            }
+
+            40% {
+                opacity: 0.3;
+            }
+
+            100% {
+                opacity: 0.8;
+            }
+        }
+
+        .anomaly-light-off .ceiling-light::after {
+            background-color: #333;
+            box-shadow: none;
+        }
+
+        .anomaly-light-green .ceiling-light::after {
+            background-color: #4caf50;
+            box-shadow: 0 0 20px 10px #4caf50;
+        }
+
+        .anomaly-light-narrow .ceiling-light {
+            width: 40%;
+        }
+
+        .anomaly-sign-crooked .wall-sign {
+            transform: translateY(-50%) perspective(200px) rotateY(-30deg) rotateZ(-15deg);
+        }
+
+        .anomaly-sign-garbled .wall-sign::before {
+            font-family: 'MS Mincho';
+        }
+
+        .anomaly-sign-shadow .wall-sign {
+            box-shadow: -5px 5px 15px rgba(200, 0, 0, 0.5);
+        }
+
+        .anomaly-sign-blue .wall-sign {
+            background-color: #1565c0;
+        }
+
+        .anomaly-sign-missing .wall-sign {
+            opacity: 0;
+        }
+
+        .anomaly-sign-text-changed .wall-sign::before {
+            content: '入口';
+        }
+
+        .anomaly-sign-dashed .wall-sign {
+            border-style: dashed;
+        }
+
+        .anomaly-sign-text-yellow .wall-sign::before {
+            color: yellow;
+        }
+
+        .anomaly-font-creepy #description {
+            font-family: 'Noto Serif JP', serif;
+            color: #bbb;
+        }
+
+        .anomaly-shake {
+            animation: shake 5s infinite linear;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-4px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(4px);
+            }
+        }
+
+        .anomaly-letter-spacing #description {
+            letter-spacing: 0.1em;
+        }
+
+        .anomaly-title-weight h1 {
+            font-weight: 400;
+        }
+
+        .anomaly-text-align-justify #description {
+            text-align: justify;
+        }
+
+        .anomaly-border-radius .game-wrapper {
+            border-radius: 50px;
+        }
+
+        .anomaly-buttons-swapped .buttons {
+            flex-direction: row-reverse;
+        }
+
+        .anomaly-text-color-strong {
+            color: #f06292 !important;
+        }
+
+        .anomaly-title-color-strong {
+            color: #ff5722 !important;
+        }
+
+        .anomaly-border-color-strong {
+            border-color: #6a1b9a !important;
+        }
+
+        .anomaly-bg-strong {
+            background-color: #0d47a1 !important;
+        }
+
+        .anomaly-wrapper-bg-strong {
+            background-color: rgba(70, 20, 20, 0.9) !important;
+        }
+
+        .anomaly-puddle-green .puddle {
+            background: rgba(50, 150, 50, 0.5);
+            box-shadow: 0 0 15px rgba(50, 150, 50, 0.7);
+        }
+
+        .anomaly-crack-red .crack,
+        .anomaly-crack-red .crack::after {
+            background: rgba(255, 0, 0, 0.5);
+        }
+
+        .anomaly-floor-yellow .floor {
+            background: linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.2)), repeating-linear-gradient(45deg, #FFD700, #FFD700 10px, #FFC107 10px, #FFC107 20px);
+        }
+
+        .anomaly-border-color-green {
+            border-color: #4caf50 !important;
+        }
+
+        .anomaly-border-color-blue {
+            border-color: #2196f3 !important;
+        }
+
+        .anomaly-floor-red .floor {
+            background: linear-gradient(rgba(30, 30, 30, 0.2), rgba(30, 30, 30, 0.1)), repeating-linear-gradient(45deg, #b71c1c, #b71c1c 10px, #c62828 10px, #c62828 20px);
+        }
+
+        .anomaly-floor-blue .floor {
+            background: linear-gradient(rgba(30, 30, 30, 0.2), rgba(30, 30, 30, 0.1)), repeating-linear-gradient(90deg, #1a237e, #1a237e 10px, #283593 10px, #283593 20px);
+        }
+
+        .anomaly-poster-upside-down .poster {
+            transform: translateY(-50%) perspective(200px) rotateY(25deg) rotateZ(180deg);
+        }
+
+        .anomaly-poster-text-garbled .poster::before {
+            content: '■■■■';
+        }
+
+        .anomaly-sign-open .wall-sign {
+            transform: translateY(-50%) perspective(200px) rotateY(-70deg);
+        }
+
+        .anomaly-sign-open .wall-sign::before {
+            content: '';
+        }
+
+        .anomaly-sign-open .wall-sign::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        .anomaly-sign-peeking .wall-sign::after {
+            content: '👀';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 30px;
+        }
+
+        .anomaly-buttons-black-text button {
+            color: #000;
+        }
+
+        .anomaly-poster-missing .poster {
+            opacity: 0;
+        }
+
+        .anomaly-poster-text-changed .poster::before {
+            content: '危険';
+        }
+
+        .anomaly-poster-color-changed .poster {
+            background-color: #add8e6;
+        }
+
+        .anomaly-text-upside-down #description {
+            transform: rotate(180deg);
+        }
+
+        .anomaly-text-mirrored #description {
+            transform: scaleX(-1);
+        }
+
+        .anomaly-floor-angle-changed .floor {
+            background: linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.2)), repeating-linear-gradient(135deg, #444, #444 10px, #555 10px, #555 20px);
+        }
+
+        .anomaly-puddle-red .puddle {
+            background: rgba(150, 50, 50, 0.5);
+            box-shadow: 0 0 15px rgba(150, 50, 50, 0.7);
+        }
+
+        .anomaly-title-shadow-green h1 {
+            text-shadow: 0 0 15px #0f0;
+        }
+
+        .anomaly-buttons-glow button {
+            box-shadow: 0 0 15px #fff;
+        }
+
+        .anomaly-wrapper-no-shadow {
+            box-shadow: none;
+        }
+
+        .anomaly-wrapper-rotated {
+            transform: rotate(-2deg);
+        }
+
+        .anomaly-message-border #message {
+            border: 1px solid var(--message-color);
+        }
+
+        .anomaly-light-hum-fast .ceiling-light::after {
+            animation-duration: 1s;
+        }
+
+        .anomaly-buttons-square button {
+            border-radius: 0;
+        }
+
+        body.anomaly-body-grayscale {
+            filter: grayscale(100%);
+        }
+
+        body.anomaly-body-sepia {
+            filter: sepia(100%);
+        }
+
+        body.anomaly-body-invert {
+            filter: invert(100%);
+        }
+
+        body.anomaly-body-hue-rotate {
+            filter: hue-rotate(180deg);
+        }
+
+        body.anomaly-body-blur {
+            filter: blur(3px);
+        }
+
+        body.anomaly-body-contrast {
+            filter: contrast(200%);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="fade-overlay"></div>
+    <div id="debug-info"></div>
+
+    <div class="game-wrapper" id="game-wrapper">
+        <div class="ceiling-light"></div>
+        <div class="wall-sign"></div>
+        <div class="poster"></div>
+        <div class="floor"></div>
+        <div class="puddle"></div>
+        <div class="crack"></div>
+        <h1 id="passage-title">0番通路</h1>
+        <p id="description"></p>
+        <div class="buttons">
+            <button id="forward-button">進む</button>
+            <button id="back-button">戻る</button>
+        </div>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        const wrapper = document.getElementById('game-wrapper');
+        const passageTitle = document.getElementById('passage-title');
+        const description = document.getElementById('description');
+        const forwardButton = document.getElementById('forward-button');
+        const backButton = document.getElementById('back-button');
+        const message = document.getElementById('message');
+        const fadeOverlay = document.getElementById('fade-overlay');
+        const bodyEl = document.body;
+        const debugInfo = document.getElementById('debug-info');
+
+        let currentPassage = 0;
+        let hasAnomaly = false;
+        let currentAnomaly = {};
+        let isFirstTurn = true;
+        let isDebugMode = false;
+        let shuffledAnomalies = [];
+
+        const normalDescription = "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。";
+
+        const anomalies = [
+            // テキスト異変
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている,", class: '', hint: '文末が「、」になっていた' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジーという音を立てて白く光っている。", class: '', hint: '「ジー…」の「…」がなかった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー‥という音を立てて白く光っている。", class: '', hint: '三点リーダー「…」が二点「‥」だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている！", class: '', hint: '文末が「！」だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている?", class: '', hint: '文末が「？」だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。。", class: '', hint: '句点が2つあった' },
+            { desc: "あなたは簡素な通路にいる．\n壁はコンクリート打ちっぱなしだ．\n天井の蛍光灯が、ジー…という音を立てて白く光っている．", class: '', hint: '句点が全角ピリオド「．」だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '文章の間が一行空いていた' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音をたてて白く光っている。", class: '', hint: '「立てて」がひらがなだった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の螢光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「蛍光灯」の漢字が違った' },
+            { desc: "あなたは簡素な通路にいる。\n璧はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「壁」の漢字が違った' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光つている。", class: '', hint: '「光っている」の「っ」がなかった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっ放しだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「ぱなし」の表記が違った' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…と言う音を立てて白く光っている。", class: '', hint: '「という」が漢字だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、シー…という音を立てて白く光っている。", class: '', hint: '擬音が「シー…」だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打放しだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「打ちっぱなし」の表記が違った' },
+            { desc: "あなたは簡素な通路に居る。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「いる」が漢字だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く輝いている。", class: '', hint: '「光っている」が「輝いている」だった' },
+            { desc: "あなたは質素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「簡素な」が「質素な」だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリートうちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「打ちっぱなし」がひらがなだった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…というおとを立てて白く光っている。", class: '', hint: '「音」がひらがなだった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白くひかっている。", class: '', hint: '「光っている」がひらがなだった' },
+            { desc: "あなたハ簡素な通路にいる。\n壁ハコンクリート打ちっぱなしだ。\n天井ノ蛍光灯ガ、ジー…という音ヲ立てて白ク光っている。", class: '', hint: '助詞がカタカナだった' },
+            { desc: "あなたはコンクリートの通路にいる。\n壁は打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '文章の構成が少し違った' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて赤く光っている。", class: '', hint: 'テキストで「赤く」と書かれていた' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。", class: '', hint: '最後の文章がなかった' },
+            { desc: "あなたは簡素な通路にいる。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '真ん中の文章がなかった' },
+            { desc: "壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '最初の文章がなかった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n床は濡れている。", class: '', hint: '文章の内容が一部違った' },
+            { desc: "あなたは簡素な通路にいない。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「いる」が「いない」になっていた' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしではない。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '文章が一部否定形だった' },
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、音もなく白く光っている。", class: '', hint: '「音もなく」と書かれていた' },
+            { desc: normalDescription + "\n背後に気配がする。", class: '', hint: '文末に一文追加されていた' },
+
+            // CSS異変
+            { desc: normalDescription, class: 'anomaly-title-weight', hint: '通路番号の太さが違った' },
+            { desc: normalDescription, class: 'anomaly-light-red', hint: '天井の照明が赤かった' },
+            { desc: normalDescription, class: 'anomaly-light-flicker', hint: '天井の照明が点滅していた' },
+            { desc: normalDescription, class: 'anomaly-light-off', hint: '天井の照明が消えていた' },
+            { desc: normalDescription, class: 'anomaly-light-green', hint: '天井の照明が緑色だった' },
+            { desc: normalDescription, class: 'anomaly-light-narrow', hint: '天井の照明が細かった' },
+            { desc: normalDescription, class: 'anomaly-font-creepy', hint: '説明文のフォントが違った' },
+            { desc: normalDescription, class: 'anomaly-shake', hint: '画面が揺れていた' },
+            { desc: normalDescription, class: 'anomaly-text-color-strong', hint: '説明文の色がピンクだった' },
+            { desc: normalDescription, class: 'anomaly-letter-spacing', hint: '説明文の文字間隔が広かった' },
+            { desc: normalDescription, class: 'anomaly-title-color-strong', hint: '通路番号の色がオレンジだった' },
+            { desc: normalDescription, class: 'anomaly-sign-crooked', hint: '壁の案内板が傾いていた' },
+            { desc: normalDescription, class: 'anomaly-sign-garbled', hint: '案内板のフォントが違った' },
+            { desc: normalDescription, class: 'anomaly-sign-shadow', hint: '案内板の影が赤かった' },
+            { desc: normalDescription, class: 'anomaly-sign-blue', hint: '案内板の色が青かった' },
+            { desc: normalDescription, class: 'anomaly-sign-missing', hint: '壁の案内板がなかった' },
+            { desc: normalDescription, class: 'anomaly-sign-text-changed', hint: '案内板の文字が「入口」だった' },
+            { desc: normalDescription, class: 'anomaly-sign-dashed', hint: '案内板の枠線が点線だった' },
+            { desc: normalDescription, class: 'anomaly-sign-text-yellow', hint: '案内板の文字が黄色だった' },
+            { desc: normalDescription, class: 'anomaly-sign-open', hint: '非常口のドアが開いていた' },
+            { desc: normalDescription, class: 'anomaly-sign-peeking', hint: '非常口の上から誰かが見ていた' },
+            { desc: normalDescription, class: 'anomaly-text-align-justify', hint: '説明文が両端揃えだった' },
+            { desc: normalDescription, class: 'anomaly-border-radius', hint: '全体の枠が丸まっていた' },
+            { desc: normalDescription, class: 'anomaly-buttons-swapped', hint: '進む/戻るボタンの位置が逆だった' },
+            { desc: normalDescription, class: 'anomaly-buttons-black-text', hint: 'ボタンの文字が黒かった' },
+            { desc: normalDescription, class: 'anomaly-puddle', hint: '床に水たまりがあった' },
+            { desc: normalDescription, class: 'anomaly-puddle-green', hint: '床の水たまりが緑色だった' },
+            { desc: normalDescription, class: 'anomaly-crack', hint: '壁に亀裂があった' },
+            { desc: normalDescription, class: 'anomaly-crack-red', hint: '壁の亀裂が赤かった' },
+            { desc: normalDescription, class: 'anomaly-border-color-strong', hint: '全体の枠線の色が紫だった' },
+            { desc: normalDescription, class: 'anomaly-border-color-green', hint: '全体の枠線の色が緑だった' },
+            { desc: normalDescription, class: 'anomaly-border-color-blue', hint: '全体の枠線の色が青だった' },
+            { desc: normalDescription, class: 'anomaly-bg-strong', hint: '背景の色が濃い青だった' },
+            { desc: normalDescription, class: 'anomaly-wrapper-bg-strong', hint: 'ゲーム画面の背景が濃い赤だった' },
+            { desc: normalDescription, class: 'anomaly-floor-yellow', hint: '床の模様が黄色だった' },
+            { desc: normalDescription, class: 'anomaly-floor-red', hint: '床の模様が赤かった' },
+            { desc: normalDescription, class: 'anomaly-floor-blue', hint: '床の模様が青かった' },
+            { desc: normalDescription, class: 'anomaly-poster-upside-down', hint: '左のポスターが逆さまだった' },
+            { desc: normalDescription, class: 'anomaly-poster-text-garbled', hint: '左のポスターの文字が化けていた' },
+            { desc: normalDescription, class: 'anomaly-poster-missing', hint: '左のポスターがなかった' },
+            { desc: normalDescription, class: 'anomaly-poster-text-changed', hint: 'ポスターの文字が「危険」だった' },
+            { desc: normalDescription, class: 'anomaly-poster-color-changed', hint: 'ポスターの色が水色だった' },
+            { desc: normalDescription, class: 'anomaly-text-upside-down', hint: '説明文が逆さまだった' },
+            { desc: normalDescription, class: 'anomaly-text-mirrored', hint: '説明文が鏡文字だった' },
+            { desc: normalDescription, class: 'anomaly-floor-angle-changed', hint: '床の模様の角度が違った' },
+            { desc: normalDescription, class: 'anomaly-puddle-red', hint: '床の水たまりが赤かった' },
+            { desc: normalDescription, class: 'anomaly-title-shadow-green', hint: '通路番号の影が緑だった' },
+            { desc: normalDescription, class: 'anomaly-buttons-glow', hint: 'ボタンが光っていた' },
+            { desc: normalDescription, class: 'anomaly-wrapper-no-shadow', hint: '全体の枠の影がなかった' },
+            { desc: normalDescription, class: 'anomaly-wrapper-rotated', hint: '全体が僅かに傾いていた' },
+            { desc: normalDescription, class: 'anomaly-message-border', hint: 'メッセージ欄に枠があった' },
+            { desc: normalDescription, class: 'anomaly-light-hum-fast', hint: '照明のちらつきが速かった' },
+            { desc: normalDescription, class: 'anomaly-buttons-square', hint: 'ボタンが四角かった' },
+            { desc: normalDescription, class: 'anomaly-body-grayscale', hint: '全体が白黒だった' },
+            { desc: normalDescription, class: 'anomaly-body-sepia', hint: '全体がセピア色だった' },
+            { desc: normalDescription, class: 'anomaly-body-invert', hint: '全体の色が反転していた' },
+            { desc: normalDescription, class: 'anomaly-body-hue-rotate', hint: '全体の色相が回転していた' },
+            { desc: normalDescription, class: 'anomaly-body-blur', hint: '全体がぼやけていた' },
+            { desc: normalDescription, class: 'anomaly-body-contrast', hint: '全体のコントラストが高かった' }
+        ];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function getNextAnomaly() {
+            if (shuffledAnomalies.length === 0) {
+                shuffledAnomalies = [...anomalies];
+                shuffleArray(shuffledAnomalies);
+            }
+            return shuffledAnomalies.pop();
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('debug') === 'true') {
+            isDebugMode = true;
+            debugInfo.style.display = 'block';
+
+            const selector = document.createElement('select');
+            selector.id = 'anomaly-selector';
+            selector.innerHTML = '<option value="-1">異変なし</option>';
+
+            // 異変リストをソート用に準備(元のインデックスを保持)
+            const anomaliesWithIndex = anomalies.map((anomaly, index) => ({
+                hint: anomaly.hint,
+                originalIndex: index,
+                anomaly: anomaly  // 異変オブジェクト自体も保持
+            }));
+
+            // ヒントの内容でソート
+            anomaliesWithIndex.sort((a, b) => a.hint.localeCompare(b.hint, 'ja'));
+
+            // option要素を作成(valueには元のインデックスを使用)
+            anomaliesWithIndex.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.originalIndex;  // 元の配列のインデックス
+                option.textContent = item.hint;
+                selector.appendChild(option);
+            });
+
+            const forceBtn = document.createElement('button');
+            forceBtn.id = 'force-anomaly-btn';
+            forceBtn.textContent = 'Force Anomaly';
+            forceBtn.onclick = () => {
+                const selectedIndex = parseInt(selector.value, 10);
+                forceSetAnomaly(selectedIndex);
+            };
+
+            debugInfo.appendChild(selector);
+            debugInfo.appendChild(forceBtn);
+        }
+
+        function initDebugMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('debug') === 'true') {
+                isDebugMode = true;
+                debugInfo.style.display = 'block';
+                debugInfo.classList.add('active');
+
+                console.log('Initializing debug mode...');
+
+                // デバッグモード用に元の配列をコピーして保存
+                originalAnomalies = JSON.parse(JSON.stringify(anomalies));
+
+                const selector = document.createElement('select');
+                selector.id = 'anomaly-selector';
+                selector.innerHTML = '<option value="-1">異変なし</option>';
+
+                // 元の配列をソート用に準備
+                const anomaliesWithIndex = originalAnomalies.map((anomaly, index) => ({
+                    hint: anomaly.hint,
+                    originalIndex: index,
+                    anomaly: anomaly
+                }));
+
+                console.log('Total anomalies before sort:', anomaliesWithIndex.length);
+
+                // ヒントの内容でソート
+                anomaliesWithIndex.sort((a, b) => a.hint.localeCompare(b.hint, 'ja'));
+
+                // option要素を作成
+                anomaliesWithIndex.forEach((item, sortedIndex) => {
+                    const option = document.createElement('option');
+                    option.value = item.originalIndex;
+                    option.textContent = `[${item.originalIndex}] ${item.hint}`;
+                    selector.appendChild(option);
+                });
+
+                const forceBtn = document.createElement('button');
+                forceBtn.id = 'force-anomaly-btn';
+                forceBtn.textContent = 'Force Anomaly';
+                forceBtn.onclick = () => {
+                    const selectedIndex = parseInt(selector.value, 10);
+                    console.log('Button clicked, selected index:', selectedIndex);
+                    forceSetAnomaly(selectedIndex);
+                };
+
+                debugInfo.innerHTML = '<h3>--- DEBUG MODE ---</h3><p>Loading...</p>';
+                debugInfo.appendChild(selector);
+                debugInfo.appendChild(forceBtn);
+
+                console.log('Debug mode initialized');
+            }
+        }
+
+        function updateDebugInfo() {
+            if (!isDebugMode) return;
+
+            const successMessage = wrapper.querySelector('.success-message');
+            if (successMessage) {
+                debugInfo.innerHTML = `
+                <h3>--- DEBUG MODE ---</h3>
+                <b>GAME STATE:</b> CLEARED<br>
+                <b>Final Passage:</b> ${currentPassage}
+            `;
+                return;
+            }
+
+            const hintText = hasAnomaly ? currentAnomaly.hint : 'なし';
+            const debugContent = `
+            <h3>--- DEBUG MODE ---</h3>
+            <b>Passage:</b> ${currentPassage}<br>
+            <b>Anomaly Active:</b> ${hasAnomaly}<br>
+            <b>Description:</b> ${hintText}<br>
+            <b>Class:</b> ${currentAnomaly.class || 'なし'}
+        `;
+
+            const selector = debugInfo.querySelector('#anomaly-selector');
+            const button = debugInfo.querySelector('#force-anomaly-btn');
+            debugInfo.innerHTML = debugContent;
+            if (selector) debugInfo.appendChild(selector);
+            if (button) debugInfo.appendChild(button);
+        }
+
+        function resetVisuals() {
+            if (currentAnomaly.class) {
+                wrapper.classList.remove(currentAnomaly.class);
+                bodyEl.classList.remove(currentAnomaly.class);
+            }
+
+            description.style.color = '';
+            passageTitle.style.color = '';
+            wrapper.style.borderColor = '';
+            wrapper.style.backgroundColor = '';
+            wrapper.style.transform = '';
+            wrapper.style.boxShadow = '';
+            bodyEl.style.backgroundColor = '';
+            bodyEl.style.filter = '';
+            forwardButton.style.color = '';
+            backButton.style.color = '';
+            message.style.border = '';
+        }
+
+        function applyAnomaly(anomaly) {
+            currentAnomaly = anomaly;
+            description.innerHTML = currentAnomaly.desc;
+            if (currentAnomaly.class) {
+                if (currentAnomaly.class.startsWith('anomaly-body-')) {
+                    bodyEl.classList.add(currentAnomaly.class);
+                } else {
+                    wrapper.classList.add(currentAnomaly.class);
+                }
+            }
+        }
+
+        function forceSetAnomaly(index) {
+            resetVisuals();
+            if (index === -1) {
+                hasAnomaly = false;
+                currentAnomaly = {};
+                description.innerHTML = normalDescription;
+            } else {
+                hasAnomaly = true;
+                const anomaly = anomalies[index];
+                applyAnomaly(anomaly);
+            }
+            updateDebugInfo();
+        }
+
+        function setupNewPassage() {
+            passageTitle.textContent = `${currentPassage >= 8 ? 8 : currentPassage}番通路`;
+
+            resetVisuals();
+
+            currentAnomaly = {};
+
+            if (isFirstTurn) {
+                hasAnomaly = false;
+                isFirstTurn = false;
+            } else if (Math.random() < 0.70) {
+                hasAnomaly = true;
+            } else {
+                hasAnomaly = false;
+            }
+
+            if (hasAnomaly) {
+                applyAnomaly(getNextAnomaly());
+            } else {
+                description.innerHTML = normalDescription;
+            }
+            updateDebugInfo();
+        }
+
+        function processTurn(decision) {
+            if (currentPassage >= 8 && !hasAnomaly && decision === false) {
+                forwardButton.disabled = true;
+                backButton.disabled = true;
+                fadeOverlay.classList.add('is-active');
+                setTimeout(() => {
+                    clearGame();
+                }, 1000);
+                return;
+            }
+
+            const isCorrect = decision === hasAnomaly;
+
+            forwardButton.disabled = true;
+            backButton.disabled = true;
+            fadeOverlay.classList.add('is-active');
+
+            setTimeout(() => {
+                if (isCorrect) {
+                    message.textContent = '...';
+                    if (currentPassage < 8) {
+                        currentPassage++;
+                    }
+                } else {
+                    const msg = hasAnomaly
+                        ? `異変を見逃しました。(内容: ${currentAnomaly.hint})`
+                        : "異変はありませんでした。";
+                    message.textContent = `${msg} 0番通路に戻ります。`;
+                    currentPassage = 0;
+                    isFirstTurn = true;
+                    shuffledAnomalies = [];
+                }
+
+                setupNewPassage();
+
+                fadeOverlay.classList.remove('is-active');
+
+                setTimeout(() => {
+                    const successMessage = wrapper.querySelector('.success-message');
+                    if (!successMessage) {
+                        forwardButton.disabled = false;
+                        backButton.disabled = false;
+                    }
+                }, 1000);
+
+            }, 1000);
+        }
+
+        function clearGame() {
+            wrapper.innerHTML = `
+            <div class="exit-container">
+                <div class="exit-light"></div>
+                <div class="stairs">
+                    <div class="step"></div>
+                    <div class="step"></div>
+                    <div class="step"></div>
+                    <div class="step"></div>
+                    <div class="step"></div>
+                </div>
+                <div class="success-message">脱出成功！</div>
+            </div>
+            <style>
+                .exit-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: flex-end;
+                    height: 300px;
+                    position: relative;
+                }
+                .exit-light {
+                    position: absolute;
+                    top: -50px;
+                    width: 300%;
+                    height: 200px;
+                    background: radial-gradient(circle, rgba(255,255,220,1) 0%, rgba(255,255,220,0) 70%);
+                    z-index: 1;
+                }
+                .stairs {
+                    width: 150px;
+                    height: 150px;
+                    position: relative;
+                    perspective: 400px;
+                    z-index: 2;
+                }
+                .step {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 30px;
+                    background: #555;
+                    border-top: 2px solid #777;
+                    transform-origin: bottom center;
+                }
+                .step:nth-child(1) { transform: translateZ(0px) translateY(0px); }
+                .step:nth-child(2) { transform: translateZ(-30px) translateY(-30px); }
+                .step:nth-child(3) { transform: translateZ(-60px) translateY(-60px); }
+                .step:nth-child(4) { transform: translateZ(-90px) translateY(-90px); }
+                .step:nth-child(5) { transform: translateZ(-120px) translateY(-120px); }
+                .success-message {
+                    margin-top: 20px;
+                    color: #4CAF50;
+                    font-size: 2em;
+                    animation: pulse 1.5s infinite alternate;
+                    z-index: 3;
+                }
+                @keyframes pulse{from{transform:scale(1)}to{transform:scale(1.05)}}
+            </style>
+        `;
+            updateDebugInfo();
+        }
+
+        forwardButton.addEventListener('click', () => { processTurn(false); });
+        backButton.addEventListener('click', () => { processTurn(true); });
+
+        initDebugMode();
+        shuffleArray(anomalies);
+        setupNewPassage();
+    </script>
+
+</body>
+
+</html>
