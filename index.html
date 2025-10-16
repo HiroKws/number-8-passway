@@ -1,10 +1,22 @@
 <!DOCTYPE html>
+<!--
+  使い方 (Usage)
+  - 通常モード: index.html をそのまま開く（クエリなし）
+  - ハードモード: URL に ?hard（例: ?hard, ?hard=1, ?hard=true, ?hard=on）
+    ・誤答して 0番に戻った直後のメッセージ: 何も表示しません
+  - ソフトモード： URL に ?soft（例: ?soft, ?soft=1, ?soft=true, ?soft=on）
+    ・正解して先へ進んだ場合でも、前回の異変を #message に表示します
+  - 通常モード時の仕様:
+    ・誤答して 0番に戻った直後に、原因（見逃し/誤報）を #message に表示します
+  - デバッグ表示: URL に ?debug（例: ?debug, ?debug=1）でデバッグ UI を表示
+  - ゲームの起動は、ブラウザでファイルを開く（例: file:///index.html、もしくはファイルをd＆dする）
+-->
 <html lang="ja">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>0番通路 (最終更新版)</title>
+    <title>８番通路</title>
     <style>
         /* --- Google Fonts --- */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Orbitron:wght@400;700&display=swap');
@@ -132,6 +144,8 @@
             font-weight: bold;
             writing-mode: vertical-rl;
             text-orientation: upright;
+            white-space: nowrap;
+            line-height: 1;
             position: absolute;
             top: 50%;
             left: 50%;
@@ -239,6 +253,16 @@
         #fade-overlay.is-active {
             opacity: 1;
             pointer-events: auto;
+        }
+
+        /* --- 異変適用時はトランジションを抑止（見破り防止） --- */
+        #game-wrapper.no-transition,
+        #game-wrapper.no-transition * {
+            transition: none !important;
+        }
+
+        body.no-transition-filter {
+            transition: none !important;
         }
 
         /* --- 追加オブジェクト --- */
@@ -432,7 +456,7 @@
             text-align: justify;
         }
 
-        .anomaly-border-radius .game-wrapper {
+        .anomaly-border-radius {
             border-radius: 50px;
         }
 
@@ -461,12 +485,14 @@
         }
 
         .anomaly-puddle-green .puddle {
+            display: block;
             background: rgba(50, 150, 50, 0.5);
             box-shadow: 0 0 15px rgba(50, 150, 50, 0.7);
         }
 
         .anomaly-crack-red .crack,
         .anomaly-crack-red .crack::after {
+            display: block;
             background: rgba(255, 0, 0, 0.5);
         }
 
@@ -496,6 +522,16 @@
 
         .anomaly-poster-text-garbled .poster::before {
             content: '■■■■';
+        }
+
+        /* Mirror text on the right exit sign */
+        .anomaly-sign-text-mirrored .wall-sign::before {
+            transform: translate(-50%, -50%) scaleX(-1);
+        }
+
+        /* Mirror text on the left poster */
+        .anomaly-poster-text-mirrored .poster::before {
+            transform: translate(-50%, -50%) scaleX(-1);
         }
 
         .anomaly-sign-open .wall-sign {
@@ -541,6 +577,26 @@
             background-color: #add8e6;
         }
 
+        /* Poster size variations */
+        .anomaly-poster-bigger .poster {
+            transform: translateY(-50%) perspective(200px) rotateY(25deg) scale(1.3);
+        }
+
+        .anomaly-poster-smaller .poster {
+            transform: translateY(-50%) perspective(200px) rotateY(25deg) scale(0.7);
+        }
+
+        /* Eye on the poster (peeking style, same as sign) */
+        .anomaly-poster-eye .poster::after {
+            content: '👀';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px;
+            filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.7));
+        }
+
         .anomaly-text-upside-down #description {
             transform: rotate(180deg);
         }
@@ -554,6 +610,7 @@
         }
 
         .anomaly-puddle-red .puddle {
+            display: block;
             background: rgba(150, 50, 50, 0.5);
             box-shadow: 0 0 15px rgba(150, 50, 50, 0.7);
         }
@@ -566,9 +623,6 @@
             box-shadow: 0 0 15px #fff;
         }
 
-        .anomaly-wrapper-no-shadow {
-            box-shadow: none;
-        }
 
         .anomaly-wrapper-rotated {
             transform: rotate(-2deg);
@@ -578,12 +632,142 @@
             border: 1px solid var(--message-color);
         }
 
-        .anomaly-light-hum-fast .ceiling-light::after {
-            animation-duration: 1s;
-        }
+        /* removed: fast flicker anomaly per request */
 
         .anomaly-buttons-square button {
             border-radius: 0;
+        }
+
+        /* --- Added anomalies (request) --- */
+        /* 2. Forward button label becomes imperative "進め" */
+        .anomaly-forward-imperative #forward-button {
+            position: relative;
+            color: transparent;
+        }
+
+        .anomaly-forward-imperative #forward-button::after {
+            content: '進め';
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        /* 3. Back button label becomes imperative "戻れ" */
+        .anomaly-back-imperative #back-button {
+            position: relative;
+            color: transparent;
+        }
+
+        .anomaly-back-imperative #back-button::after {
+            content: '戻れ';
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        /* 4. Panties at bottom-right */
+        #game-wrapper.anomaly-panties-br::after {
+            content: '🩲';
+            position: absolute;
+            right: 8px;
+            bottom: 6px;
+            font-size: 28px;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+            pointer-events: none;
+        }
+
+        /* 5. Trunks at bottom-left */
+        #game-wrapper.anomaly-trunks-bl::before {
+            content: '🩳';
+            position: absolute;
+            left: 8px;
+            bottom: 6px;
+            font-size: 28px;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+            pointer-events: none;
+        }
+
+        /* 6. Poster text "安全弟一" */
+        .anomaly-poster-safety-brother .poster::before {
+            content: '安全弟一';
+        }
+
+        /* 7. (Removed) Message ellipsis color black — deleted per request */
+
+        /* 8. Exit sign position higher/lower */
+        .anomaly-sign-higher .wall-sign {
+            top: 30%;
+        }
+
+        .anomaly-sign-lower .wall-sign {
+            top: 50%;
+        }
+
+        /* 9. Poster position higher/lower */
+        .anomaly-poster-higher .poster {
+            top: 40%;
+        }
+
+        .anomaly-poster-lower .poster {
+            top: 60%;
+        }
+
+        /* 10. Passage title slightly lower */
+        .anomaly-passage-title-lower #passage-title {
+            transform: translateY(8px);
+        }
+
+        /* 11. Ceiling light stronger blur */
+        .anomaly-light-blur-stronger .ceiling-light::after {
+            box-shadow: 0 0 22px 8px var(--normal-light-color);
+        }
+
+        /* 12. Buttons avoid cursor (JS-driven; optional easing here) */
+        .anomaly-buttons-avoid-cursor .buttons button {
+            will-change: transform;
+        }
+
+        /* New: cursor appears faint (light, semi-transparent) */
+        .anomaly-cursor-faint#game-wrapper,
+        .anomaly-cursor-faint#game-wrapper * {
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='6' fill='%23fff' fill-opacity='0.35' stroke='%23fff' stroke-opacity='0.35'/></svg>") 8 8, default;
+        }
+
+        /* New: dim the game when cursor leaves wrapper (active only when anomaly on) */
+        .anomaly-dim-on-leave#game-wrapper.is-dimmed {
+            filter: brightness(0.6) contrast(0.95);
+        }
+
+        /* New: cursor trail dots */
+        .anomaly-cursor-trail .cursor-trail-dot {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.35);
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: none;
+            filter: blur(0.4px);
+            animation: trailFade 0.6s ease-out forwards;
+            z-index: 5;
+        }
+
+        @keyframes trailFade {
+            from {
+                opacity: 0.35;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.8);
+            }
         }
 
         body.anomaly-body-grayscale {
@@ -608,6 +792,50 @@
 
         body.anomaly-body-contrast {
             filter: contrast(200%);
+        }
+
+        /* Background silhouette (bring above wrapper for visibility) */
+        body.anomaly-body-silhouette::before {
+            content: '👤';
+            position: fixed;
+            left: 50%;
+            top: 35%;
+            transform: translate(-50%, -50%);
+            font-size: 220px;
+            color: rgba(255, 255, 255, 0.18);
+            text-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            z-index: 3;
+            /* above wrapper (z-index:2), below fade/debug */
+        }
+
+        /* Body anomaly: small heart at browser top-left */
+        body.anomaly-body-heart-topleft::before {
+            content: '❤';
+            position: fixed;
+            top: 8px;
+            left: 10px;
+            font-size: 22px;
+            color: #ff5a77;
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+            z-index: 10000;
+            /* ensure above UI */
+            animation: heartPulse 1.6s ease-in-out infinite;
+        }
+
+        @keyframes heartPulse {
+            from {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            to {
+                transform: scale(1);
+            }
         }
     </style>
 </head>
@@ -643,6 +871,68 @@
         const fadeOverlay = document.getElementById('fade-overlay');
         const bodyEl = document.body;
         const debugInfo = document.getElementById('debug-info');
+        // --- For anomaly #12: buttons avoid cursor ---
+        let avoidCursorActive = false;
+        const buttons = () => Array.from(wrapper.querySelectorAll('.buttons button'));
+        function resetButtonTransforms() {
+            buttons().forEach(btn => { btn.style.transform = ''; });
+        }
+        function handleMouseMoveAvoid(e) {
+            if (!avoidCursorActive) return;
+            const mx = e.clientX;
+            const my = e.clientY;
+            const maxRadius = 120; // proximity radius
+            const maxPush = 18;    // max px to push away
+            buttons().forEach(btn => {
+                const rect = btn.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = cx - mx;
+                const dy = cy - my;
+                const dist = Math.hypot(dx, dy) || 1;
+                if (dist < maxRadius) {
+                    const scale = (1 - dist / maxRadius);
+                    const mag = maxPush * scale;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const tx = nx * mag;
+                    const ty = ny * mag;
+                    btn.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
+                } else {
+                    btn.style.transform = '';
+                }
+            });
+        }
+        wrapper.addEventListener('mousemove', handleMouseMoveAvoid);
+        wrapper.addEventListener('mouseleave', resetButtonTransforms);
+        // --- For anomaly: dim screen when cursor leaves ---
+        let dimOnLeaveActive = false;
+        wrapper.addEventListener('mouseenter', () => {
+            if (dimOnLeaveActive) wrapper.classList.remove('is-dimmed');
+        });
+        wrapper.addEventListener('mouseleave', () => {
+            if (dimOnLeaveActive) wrapper.classList.add('is-dimmed');
+        });
+        // --- For anomaly: cursor trail ---
+        let cursorTrailActive = false;
+        function spawnCursorTrailDot(x, y) {
+            const dot = document.createElement('div');
+            dot.className = 'cursor-trail-dot';
+            dot.style.left = `${x}px`;
+            dot.style.top = `${y}px`;
+            wrapper.appendChild(dot);
+            // Remove after animation
+            setTimeout(() => dot.remove(), 650);
+        }
+        function handleMouseMoveTrail(e) {
+            if (!cursorTrailActive) return;
+            const rect = wrapper.getBoundingClientRect();
+            spawnCursorTrailDot(e.clientX - rect.left, e.clientY - rect.top);
+        }
+        wrapper.addEventListener('mousemove', handleMouseMoveTrail);
+        // --- For anomaly: URL bar shows "がんばれー" ---
+        let urlGanbareActive = false;
+        const originalURLHash = location.hash;
 
         let currentPassage = 0;
         let hasAnomaly = false;
@@ -650,6 +940,42 @@
         let isFirstTurn = true;
         let isDebugMode = false;
         let shuffledAnomalies = [];
+        let originalAnomalies = [];
+        // Hard mode toggle from URL and pending message store
+        let isHardMode = false;
+        let isSoftMode = false;
+        let pendingReturnMessage = '';
+        let pendingProceedMessage = '';
+
+        // Enable debug if the param is truthy or present
+        function isDebugEnabledFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has('debug')) return false;
+            const raw = params.get('debug');
+            if (raw === null) return true;
+            const v = String(raw).toLowerCase();
+            return v === '' || v === 'true' || v === '1' || v === 'on' || v === 'yes' || v === 'y' || v === 't' || v === 'ture';
+        }
+
+        // Enable hard mode if the param is truthy or present
+        function isHardModeEnabledFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has('hard')) return false;
+            const raw = params.get('hard');
+            if (raw === null) return true;
+            const v = String(raw).toLowerCase();
+            return v === '' || v === 'true' || v === '1' || v === 'on' || v === 'yes' || v === 'y' || v === 't' || v === 'ture';
+        }
+
+        // Enable soft mode if the param is truthy or present
+        function isSoftModeEnabledFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has('soft')) return false;
+            const raw = params.get('soft');
+            if (raw === null) return true;
+            const v = String(raw).toLowerCase();
+            return v === '' || v === 'true' || v === '1' || v === 'on' || v === 'yes' || v === 'y' || v === 't' || v === 'ture';
+        }
 
         const normalDescription = "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。";
 
@@ -705,8 +1031,9 @@
             { desc: normalDescription, class: 'anomaly-sign-garbled', hint: '案内板のフォントが違った' },
             { desc: normalDescription, class: 'anomaly-sign-shadow', hint: '案内板の影が赤かった' },
             { desc: normalDescription, class: 'anomaly-sign-blue', hint: '案内板の色が青かった' },
-            { desc: normalDescription, class: 'anomaly-sign-missing', hint: '壁の案内板がなかった' },
+            { desc: normalDescription, class: 'anomaly-poster-missing', hint: '壁の案内板がなかった' },
             { desc: normalDescription, class: 'anomaly-sign-text-changed', hint: '案内板の文字が「入口」だった' },
+            { desc: normalDescription, class: 'anomaly-sign-text-mirrored', hint: '非常口の文字が鏡文字だった' },
             { desc: normalDescription, class: 'anomaly-sign-dashed', hint: '案内板の枠線が点線だった' },
             { desc: normalDescription, class: 'anomaly-sign-text-yellow', hint: '案内板の文字が黄色だった' },
             { desc: normalDescription, class: 'anomaly-sign-open', hint: '非常口のドアが開いていた' },
@@ -731,29 +1058,83 @@
             { desc: normalDescription, class: 'anomaly-poster-text-garbled', hint: '左のポスターの文字が化けていた' },
             { desc: normalDescription, class: 'anomaly-poster-missing', hint: '左のポスターがなかった' },
             { desc: normalDescription, class: 'anomaly-poster-text-changed', hint: 'ポスターの文字が「危険」だった' },
+            { desc: normalDescription, class: 'anomaly-poster-text-mirrored', hint: '左のポスターの文字が鏡文字だった' },
             { desc: normalDescription, class: 'anomaly-poster-color-changed', hint: 'ポスターの色が水色だった' },
+            { desc: normalDescription, class: 'anomaly-poster-bigger', hint: '左のポスターが大きくなっていた' },
+            { desc: normalDescription, class: 'anomaly-poster-smaller', hint: '左のポスターが小さくなっていた' },
+            { desc: normalDescription, class: 'anomaly-poster-eye', hint: '左のポスターに目玉が表示されていた' },
             { desc: normalDescription, class: 'anomaly-text-upside-down', hint: '説明文が逆さまだった' },
             { desc: normalDescription, class: 'anomaly-text-mirrored', hint: '説明文が鏡文字だった' },
             { desc: normalDescription, class: 'anomaly-floor-angle-changed', hint: '床の模様の角度が違った' },
             { desc: normalDescription, class: 'anomaly-puddle-red', hint: '床の水たまりが赤かった' },
             { desc: normalDescription, class: 'anomaly-title-shadow-green', hint: '通路番号の影が緑だった' },
             { desc: normalDescription, class: 'anomaly-buttons-glow', hint: 'ボタンが光っていた' },
-            { desc: normalDescription, class: 'anomaly-wrapper-no-shadow', hint: '全体の枠の影がなかった' },
             { desc: normalDescription, class: 'anomaly-wrapper-rotated', hint: '全体が僅かに傾いていた' },
             { desc: normalDescription, class: 'anomaly-message-border', hint: 'メッセージ欄に枠があった' },
-            { desc: normalDescription, class: 'anomaly-light-hum-fast', hint: '照明のちらつきが速かった' },
             { desc: normalDescription, class: 'anomaly-buttons-square', hint: 'ボタンが四角かった' },
             { desc: normalDescription, class: 'anomaly-body-grayscale', hint: '全体が白黒だった' },
             { desc: normalDescription, class: 'anomaly-body-sepia', hint: '全体がセピア色だった' },
             { desc: normalDescription, class: 'anomaly-body-invert', hint: '全体の色が反転していた' },
             { desc: normalDescription, class: 'anomaly-body-hue-rotate', hint: '全体の色相が回転していた' },
             { desc: normalDescription, class: 'anomaly-body-blur', hint: '全体がぼやけていた' },
-            { desc: normalDescription, class: 'anomaly-body-contrast', hint: '全体のコントラストが高かった' }
+            { desc: normalDescription, class: 'anomaly-body-contrast', hint: '全体のコントラストが高かった' },
+            { desc: normalDescription, class: 'anomaly-body-silhouette', hint: '背景に人影が表示されていた' },
+
+            // --- Added anomalies (request) ---
+            // 1. 「天井」が「天丼」
+            { desc: "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天丼の蛍光灯が、ジー…という音を立てて白く光っている。", class: '', hint: '「天井」が「天丼」だった' },
+            // 2. 進む->進め
+            { desc: normalDescription, class: 'anomaly-forward-imperative', hint: 'ボタンの「進む」が「進め」だった' },
+            // 3. 戻る->戻れ
+            { desc: normalDescription, class: 'anomaly-back-imperative', hint: 'ボタンの「戻る」が「戻れ」だった' },
+            // 4. 右下にパンティー
+            { desc: normalDescription, class: 'anomaly-panties-br', hint: '右下にパンティーが落ちていた' },
+            // 5. 左下にトランクス
+            { desc: normalDescription, class: 'anomaly-trunks-bl', hint: '左下にトランクスが落ちていた' },
+            // 6. 安全第一→安全弟一
+            { desc: normalDescription, class: 'anomaly-poster-safety-brother', hint: 'ポスターの「安全第一」が「安全弟一」だった' },
+            // 8. 非常口が高い
+            { desc: normalDescription, class: 'anomaly-sign-higher', hint: '非常口の位置が少し高かった' },
+            // 8b. 非常口が低い
+            { desc: normalDescription, class: 'anomaly-sign-lower', hint: '非常口の位置が少し低かった' },
+            // 9. ポスターが高い
+            { desc: normalDescription, class: 'anomaly-poster-higher', hint: 'ポスターの位置が少し高かった' },
+            // 9b. ポスターが低い
+            { desc: normalDescription, class: 'anomaly-poster-lower', hint: 'ポスターの位置が少し低かった' },
+            // 10. 「〜番通路」の表示位置が少し低い
+            { desc: normalDescription, class: 'anomaly-passage-title-lower', hint: '「〜番通路」の表示位置が少し低かった' },
+            // 11. 天井ライトのブラー効果が少し大きい
+            { desc: normalDescription, class: 'anomaly-light-blur-stronger', hint: '天井ライトの光線が強かった' },
+            // 12. カーソルを近づけるとボタンが逃げる
+            { desc: normalDescription, class: 'anomaly-buttons-avoid-cursor', hint: 'カーソルに反発してボタンが少し逃げた' },
+            // 13. カーソルの色が薄くなる
+            { desc: normalDescription, class: 'anomaly-cursor-faint', hint: 'カーソルの色が薄くなっていた' },
+            // 14. 画面外にカーソルで暗くなる
+            { desc: normalDescription, class: 'anomaly-dim-on-leave', hint: 'ゲーム画面外にカーソルで画面が暗くなった' },
+            // 15. カーソル移動で薄い軌跡が残る
+            { desc: normalDescription, class: 'anomaly-cursor-trail', hint: 'カーソルの移動に薄い軌跡が残った' },
+            // 16. URL表示欄に「がんばれー」
+            { desc: normalDescription, class: 'anomaly-url-ganbare', hint: 'URLの表示欄に「がんばれー」と表示された' },
+            // 17. ブラウザ左上にハート
+            { desc: normalDescription, class: 'anomaly-body-heart-topleft', hint: 'ブラウザの左上にハートが表示された' }
         ];
+
+        // Use crypto-backed randomness to avoid repetitive patterns across reloads
+        function randomFloat() {
+            try {
+                if (window.crypto && window.crypto.getRandomValues) {
+                    const u32 = new Uint32Array(1);
+                    window.crypto.getRandomValues(u32);
+                    // 0 <= x < 1
+                    return u32[0] / 4294967296; // 2^32
+                }
+            } catch (_) { /* fallback below */ }
+            return Math.random();
+        }
 
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
+                const j = Math.floor(randomFloat() * (i + 1));
                 [array[i], array[j]] = [array[j], array[i]];
             }
         }
@@ -766,48 +1147,10 @@
             return shuffledAnomalies.pop();
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('debug') === 'true') {
-            isDebugMode = true;
-            debugInfo.style.display = 'block';
-
-            const selector = document.createElement('select');
-            selector.id = 'anomaly-selector';
-            selector.innerHTML = '<option value="-1">異変なし</option>';
-
-            // 異変リストをソート用に準備(元のインデックスを保持)
-            const anomaliesWithIndex = anomalies.map((anomaly, index) => ({
-                hint: anomaly.hint,
-                originalIndex: index,
-                anomaly: anomaly  // 異変オブジェクト自体も保持
-            }));
-
-            // ヒントの内容でソート
-            anomaliesWithIndex.sort((a, b) => a.hint.localeCompare(b.hint, 'ja'));
-
-            // option要素を作成(valueには元のインデックスを使用)
-            anomaliesWithIndex.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.originalIndex;  // 元の配列のインデックス
-                option.textContent = item.hint;
-                selector.appendChild(option);
-            });
-
-            const forceBtn = document.createElement('button');
-            forceBtn.id = 'force-anomaly-btn';
-            forceBtn.textContent = 'Force Anomaly';
-            forceBtn.onclick = () => {
-                const selectedIndex = parseInt(selector.value, 10);
-                forceSetAnomaly(selectedIndex);
-            };
-
-            debugInfo.appendChild(selector);
-            debugInfo.appendChild(forceBtn);
-        }
+        // NOTE: Debug UI is initialized in initDebugMode() to avoid duplication.
 
         function initDebugMode() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('debug') === 'true') {
+            if (isDebugEnabledFromURL()) {
                 isDebugMode = true;
                 debugInfo.style.display = 'block';
                 debugInfo.classList.add('active');
@@ -817,9 +1160,20 @@
                 // デバッグモード用に元の配列をコピーして保存
                 originalAnomalies = JSON.parse(JSON.stringify(anomalies));
 
+                // すでに初期化済みなら再初期化を避ける
+                if (debugInfo.querySelector('#anomaly-selector')) {
+                    updateDebugInfo();
+                    return;
+                }
+
                 const selector = document.createElement('select');
                 selector.id = 'anomaly-selector';
                 selector.innerHTML = '<option value="-1">異変なし</option>';
+                // 選択した時点で即適用
+                selector.addEventListener('change', () => {
+                    const selectedIndex = parseInt(selector.value, 10);
+                    forceSetAnomaly(selectedIndex);
+                });
 
                 // 元の配列をソート用に準備
                 const anomaliesWithIndex = originalAnomalies.map((anomaly, index) => ({
@@ -841,18 +1195,20 @@
                     selector.appendChild(option);
                 });
 
-                const forceBtn = document.createElement('button');
-                forceBtn.id = 'force-anomaly-btn';
-                forceBtn.textContent = 'Force Anomaly';
-                forceBtn.onclick = () => {
-                    const selectedIndex = parseInt(selector.value, 10);
-                    console.log('Button clicked, selected index:', selectedIndex);
-                    forceSetAnomaly(selectedIndex);
+                // 脱出成功スクリーン表示ボタン
+                const successBtn = document.createElement('button');
+                successBtn.id = 'show-success-btn';
+                successBtn.textContent = '脱出成功を表示';
+                successBtn.onclick = () => {
+                    currentPassage = 8;
+                    hasAnomaly = false;
+                    clearGame();
+                    fadeOverlay.classList.remove('is-active');
                 };
 
                 debugInfo.innerHTML = '<h3>--- DEBUG MODE ---</h3><p>Loading...</p>';
                 debugInfo.appendChild(selector);
-                debugInfo.appendChild(forceBtn);
+                debugInfo.appendChild(successBtn);
 
                 console.log('Debug mode initialized');
             }
@@ -881,13 +1237,16 @@
         `;
 
             const selector = debugInfo.querySelector('#anomaly-selector');
-            const button = debugInfo.querySelector('#force-anomaly-btn');
+            const successBtn = debugInfo.querySelector('#show-success-btn');
             debugInfo.innerHTML = debugContent;
             if (selector) debugInfo.appendChild(selector);
-            if (button) debugInfo.appendChild(button);
+            if (successBtn) debugInfo.appendChild(successBtn);
         }
 
         function resetVisuals() {
+            // 異変の解除時にトランジションで動きが出ないよう一時的に抑止
+            wrapper.classList.add('no-transition');
+            bodyEl.classList.add('no-transition-filter');
             if (currentAnomaly.class) {
                 wrapper.classList.remove(currentAnomaly.class);
                 bodyEl.classList.remove(currentAnomaly.class);
@@ -904,11 +1263,35 @@
             forwardButton.style.color = '';
             backButton.style.color = '';
             message.style.border = '';
+            // reset button drift (for avoid-cursor anomaly)
+            avoidCursorActive = false;
+            resetButtonTransforms();
+            // reset dim-on-leave state
+            dimOnLeaveActive = false;
+            wrapper.classList.remove('is-dimmed');
+            // reset cursor trail
+            cursorTrailActive = false;
+            wrapper.querySelectorAll('.cursor-trail-dot').forEach(el => el.remove());
+            // reset URL bar text if we changed it
+            if (urlGanbareActive) {
+                history.replaceState(null, '', location.pathname + location.search + originalURLHash);
+                urlGanbareActive = false;
+            }
+            // 次フレームで抑止フラグを解除
+            requestAnimationFrame(() => {
+                // reflow を挟んで確実にスタイルを確定
+                void wrapper.offsetHeight;
+                wrapper.classList.remove('no-transition');
+                bodyEl.classList.remove('no-transition-filter');
+            });
         }
 
         function applyAnomaly(anomaly) {
             currentAnomaly = anomaly;
             description.innerHTML = currentAnomaly.desc;
+            // 異変の適用時もトランジションで動きが出ないよう一時的に抑止
+            wrapper.classList.add('no-transition');
+            bodyEl.classList.add('no-transition-filter');
             if (currentAnomaly.class) {
                 if (currentAnomaly.class.startsWith('anomaly-body-')) {
                     bodyEl.classList.add(currentAnomaly.class);
@@ -916,6 +1299,29 @@
                     wrapper.classList.add(currentAnomaly.class);
                 }
             }
+            // Enable/disable cursor-avoid behavior dynamically
+            avoidCursorActive = currentAnomaly.class === 'anomaly-buttons-avoid-cursor';
+            if (!avoidCursorActive) resetButtonTransforms();
+            // Enable dim-on-leave behavior dynamically
+            dimOnLeaveActive = currentAnomaly.class === 'anomaly-dim-on-leave';
+            if (!dimOnLeaveActive) wrapper.classList.remove('is-dimmed');
+            // Enable cursor trail behavior dynamically
+            cursorTrailActive = currentAnomaly.class === 'anomaly-cursor-trail';
+            if (!cursorTrailActive) wrapper.querySelectorAll('.cursor-trail-dot').forEach(el => el.remove());
+            // Enable URL bar change dynamically (use hash to avoid navigation)
+            if (currentAnomaly.class === 'anomaly-url-ganbare') {
+                urlGanbareActive = true;
+                history.replaceState(null, '', location.pathname + location.search + '#がんばれー');
+            } else if (urlGanbareActive) {
+                history.replaceState(null, '', location.pathname + location.search + originalURLHash);
+                urlGanbareActive = false;
+            }
+            // 次フレームで抑止フラグを解除（アニメーション系の異変はCSSのanimationで動くため影響なし）
+            requestAnimationFrame(() => {
+                void wrapper.offsetHeight;
+                wrapper.classList.remove('no-transition');
+                bodyEl.classList.remove('no-transition-filter');
+            });
         }
 
         function forceSetAnomaly(index) {
@@ -938,11 +1344,13 @@
             resetVisuals();
 
             currentAnomaly = {};
+            // Clear transient message so '...' does not remain when nothing to show
+            message.textContent = '';
 
             if (isFirstTurn) {
                 hasAnomaly = false;
                 isFirstTurn = false;
-            } else if (Math.random() < 0.70) {
+            } else if (randomFloat() < 0.70) {
                 hasAnomaly = true;
             } else {
                 hasAnomaly = false;
@@ -954,6 +1362,18 @@
                 description.innerHTML = normalDescription;
             }
             updateDebugInfo();
+
+            // In normal mode, if a pending message exists when returning to 0, show the cause.
+            if (!isHardMode && currentPassage === 0 && pendingReturnMessage) {
+                message.textContent = pendingReturnMessage;
+                pendingReturnMessage = '';
+            }
+
+            // In soft mode, after a correct detection on previous turn, show the anomaly content
+            if (isSoftMode && currentPassage > 0 && pendingProceedMessage) {
+                message.textContent = pendingProceedMessage;
+                pendingProceedMessage = '';
+            }
         }
 
         function processTurn(decision) {
@@ -963,6 +1383,8 @@
                 fadeOverlay.classList.add('is-active');
                 setTimeout(() => {
                     clearGame();
+                    // Reveal the success screen after fade
+                    fadeOverlay.classList.remove('is-active');
                 }, 1000);
                 return;
             }
@@ -975,6 +1397,10 @@
 
             setTimeout(() => {
                 if (isCorrect) {
+                    // In soft mode, if an anomaly was correctly detected, carry over its content
+                    if (isSoftMode && hasAnomaly && currentAnomaly && currentAnomaly.hint) {
+                        pendingProceedMessage = `異変: ${currentAnomaly.hint}`;
+                    }
                     message.textContent = '...';
                     if (currentPassage < 8) {
                         currentPassage++;
@@ -983,7 +1409,9 @@
                     const msg = hasAnomaly
                         ? `異変を見逃しました。(内容: ${currentAnomaly.hint})`
                         : "異変はありませんでした。";
-                    message.textContent = `${msg} 0番通路に戻ります。`;
+                    // In hard mode, show nothing when returning to 0.
+                    // In normal mode, defer the cause message to display on the 0 passage.
+                    pendingReturnMessage = isHardMode ? '' : `${msg} 0番通路に戻ります。`;
                     currentPassage = 0;
                     isFirstTurn = true;
                     shuffledAnomalies = [];
@@ -1008,6 +1436,7 @@
             wrapper.innerHTML = `
             <div class="exit-container">
                 <div class="exit-light"></div>
+                <div class="exit-floor"></div>
                 <div class="stairs">
                     <div class="step"></div>
                     <div class="step"></div>
@@ -1025,21 +1454,90 @@
                     justify-content: flex-end;
                     height: 300px;
                     position: relative;
+                    background: radial-gradient(circle at 50% -40px, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.85) 100%);
+                    overflow: hidden;
+                }
+                .exit-container::before{
+                    content: '';
+                    position: absolute;
+                    inset: -60px;
+                    background: radial-gradient(circle at 50% -40px, rgba(0,0,0,0) 28%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.9) 95%);
+                    z-index: 2; /* darken surroundings */
+                    pointer-events: none;
                 }
                 .exit-light {
                     position: absolute;
                     top: -50px;
-                    width: 300%;
-                    height: 200px;
-                    background: radial-gradient(circle, rgba(255,255,220,1) 0%, rgba(255,255,220,0) 70%);
-                    z-index: 1;
+                    width: 400%;
+                    height: 260px;
+                    background:
+                        radial-gradient(circle at 50% 10%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.85) 14%, rgba(255,255,180,0.7) 26%, rgba(255,255,200,0.25) 46%, rgba(255,255,220,0.05) 70%, rgba(255,255,220,0) 80%),
+                        radial-gradient(circle at 50% 10%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 35%);
+                    filter: blur(6px) brightness(1.25);
+                    animation: glowPulse 2.2s ease-in-out infinite;
+                    z-index: 1; /* behind overlay */
+                }
+                /* Foreground floor plane */
+                .exit-floor {
+                    position: absolute;
+                    left: 50%;
+                    bottom: -10px;
+                    transform: translateX(-50%) perspective(700px) rotateX(58deg);
+                    width: 320%;
+                    height: 160px;
+                    background:
+                        linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(238,238,238,0.9)),
+                        repeating-linear-gradient(45deg, rgba(245,245,245,0.9) 0px, rgba(245,245,245,0.9) 10px, rgba(232,232,232,0.9) 10px, rgba(232,232,232,0.9) 20px);
+                    box-shadow: 0 -8px 30px rgba(255,255,220,0.6) inset, 0 0 30px rgba(255,255,200,0.25);
+                    z-index: 3; /* same layer as stairs, will render under by DOM order */
                 }
                 .stairs {
                     width: 150px;
                     height: 150px;
                     position: relative;
                     perspective: 400px;
-                    z-index: 2;
+                    z-index: 3; /* above vignette */
+                    overflow: visible;
+                }
+                /* Soft glow spilling onto the steps */
+                .stairs::before {
+                    content: '';
+                    position: absolute;
+                    left: 50%;
+                    top: -10px;
+                    transform: translateX(-50%);
+                    width: 200%;
+                    height: 180%;
+                    background: radial-gradient(ellipse at 50% -20px,
+                        rgba(255,255,240,0.85) 0%,
+                        rgba(255,255,210,0.55) 25%,
+                        rgba(255,255,190,0.25) 48%,
+                        rgba(255,255,180,0) 70%);
+                    filter: blur(10px);
+                    pointer-events: none;
+                    z-index: 4;
+                }
+                /* Light rays across the stairs */
+                .stairs::after {
+                    content: '';
+                    position: absolute;
+                    left: 50%;
+                    top: -20px;
+                    transform: translateX(-50%) rotate(-8deg);
+                    width: 260%;
+                    height: 200%;
+                    background:
+                        repeating-linear-gradient(
+                            to bottom,
+                            rgba(255,255,220,0.35) 0px,
+                            rgba(255,255,220,0.35) 6px,
+                            rgba(255,255,220,0.0) 22px,
+                            rgba(255,255,220,0.0) 32px
+                        );
+                    opacity: 0.8;
+                    filter: blur(8px);
+                    pointer-events: none;
+                    z-index: 4;
                 }
                 .step {
                     position: absolute;
@@ -1047,9 +1545,10 @@
                     left: 0;
                     width: 100%;
                     height: 30px;
-                    background: #555;
-                    border-top: 2px solid #777;
+                    background: #f0f0f0;
+                    border-top: 2px solid #ffffff;
                     transform-origin: bottom center;
+                    box-shadow: inset 0 8px 18px rgba(255,255,240,0.25);
                 }
                 .step:nth-child(1) { transform: translateZ(0px) translateY(0px); }
                 .step:nth-child(2) { transform: translateZ(-30px) translateY(-30px); }
@@ -1058,12 +1557,20 @@
                 .step:nth-child(5) { transform: translateZ(-120px) translateY(-120px); }
                 .success-message {
                     margin-top: 20px;
-                    color: #4CAF50;
-                    font-size: 2em;
+                    color: #ffffff;
+                    font-size: 2.2em;
+                    font-weight: 700;
+                    -webkit-text-stroke: 1px rgba(0,0,0,0.55);
+                    text-shadow:
+                        0 1px 2px rgba(0,0,0,0.85),
+                        0 2px 6px rgba(0,0,0,0.6),
+                        0 0 8px rgba(255,255,200,0.85),
+                        0 0 18px rgba(255,255,140,0.55);
                     animation: pulse 1.5s infinite alternate;
-                    z-index: 3;
+                    z-index: 5;
                 }
                 @keyframes pulse{from{transform:scale(1)}to{transform:scale(1.05)}}
+                @keyframes glowPulse{0%{filter: blur(6px) brightness(1.15)}50%{filter: blur(7px) brightness(1.35)}100%{filter: blur(6px) brightness(1.15)}}
             </style>
         `;
             updateDebugInfo();
@@ -1073,7 +1580,12 @@
         backButton.addEventListener('click', () => { processTurn(true); });
 
         initDebugMode();
-        shuffleArray(anomalies);
+        // Initialize hard/soft mode from URL
+        isHardMode = isHardModeEnabledFromURL();
+        isSoftMode = isSoftModeEnabledFromURL();
+        // NOTE: Do not shuffle the master `anomalies` array.
+        // Random selection uses `shuffledAnomalies` built from a copy in getNextAnomaly().
+        // Shuffling here breaks debug dropdown indices.
         setupNewPassage();
     </script>
 
