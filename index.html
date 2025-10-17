@@ -9,6 +9,10 @@
   - 通常モード時の仕様:
     ・誤答して 0番に戻った直後に、原因（見逃し/誤報）を #message に表示します
   - デバッグ表示: URL に ?debug（例: ?debug, ?debug=1）でデバッグ UI を表示
+  - シミュレーション: URL に ?sim=N（例: ?sim=1000, ?sim=5000）で乱数シミュレーションを実行
+    ・実際のシャッフルアルゴリズムをN回実行し、末尾10個の出現頻度を分析
+    ・結果はブラウザコンソール（F12）に詳細表示
+    ・回数を指定しない場合（?sim）はデフォルト1000回
   - ゲームの起動は、ブラウザでファイルを開く（例: file:///index.html、もしくはファイルをd＆dする）
 -->
 <html lang="ja">
@@ -312,21 +316,48 @@
         }
 
         /* --- デバッグモード用スタイル --- */
-        #debug-info {
+        #debug-toggle-btn {
             position: fixed;
             bottom: 10px;
             left: 10px;
             background: rgba(0, 0, 0, 0.8);
             color: #0f0;
+            padding: 8px 12px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 10001;
+            cursor: pointer;
+            display: none;
+        }
+
+        #debug-toggle-btn:hover {
+            background: rgba(0, 150, 0, 0.3);
+        }
+
+        #debug-info {
+            position: fixed;
+            bottom: 45px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.95);
+            color: #0f0;
             padding: 15px;
             border: 1px solid #0f0;
             border-radius: 5px;
             font-family: monospace;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 12px;
+            line-height: 1.5;
             z-index: 10000;
             text-align: left;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
             display: none;
+        }
+
+        #debug-info.hidden {
+            display: none !important;
         }
 
         #debug-info h3 {
@@ -334,12 +365,18 @@
             padding-bottom: 5px;
             border-bottom: 1px solid #0f0;
             color: #0f0;
+            font-size: 14px;
         }
 
         #debug-info select,
         #debug-info button {
             margin-top: 10px;
             width: 100%;
+            font-size: 11px;
+        }
+
+        #debug-info select {
+            max-height: 200px;
         }
 
         /* --- 異変のスタイル --- */
@@ -843,6 +880,7 @@
 <body>
 
     <div id="fade-overlay"></div>
+    <button id="debug-toggle-btn">デバッグ表示</button>
     <div id="debug-info"></div>
 
     <div class="game-wrapper" id="game-wrapper">
@@ -871,6 +909,7 @@
         const fadeOverlay = document.getElementById('fade-overlay');
         const bodyEl = document.body;
         const debugInfo = document.getElementById('debug-info');
+        const debugToggleBtn = document.getElementById('debug-toggle-btn');
         // --- For anomaly #12: buttons avoid cursor ---
         let avoidCursorActive = false;
         const buttons = () => Array.from(wrapper.querySelectorAll('.buttons button'));
@@ -946,6 +985,18 @@
         let isSoftMode = false;
         let pendingReturnMessage = '';
         let pendingProceedMessage = '';
+        // Debug: anomaly selection counters
+        const anomalyCountByClass = new Map();
+        let anomalyPickTotal = 0;
+        function incAnomalyCount(cls) {
+            const key = cls || '(text-only)';
+            anomalyCountByClass.set(key, (anomalyCountByClass.get(key) || 0) + 1);
+            anomalyPickTotal++;
+        }
+        function resetAnomalyCounts() {
+            anomalyCountByClass.clear();
+            anomalyPickTotal = 0;
+        }
 
         // Enable debug if the param is truthy or present
         function isDebugEnabledFromURL() {
@@ -975,6 +1026,26 @@
             if (raw === null) return true;
             const v = String(raw).toLowerCase();
             return v === '' || v === 'true' || v === '1' || v === 'on' || v === 'yes' || v === 'y' || v === 't' || v === 'ture';
+        }
+
+        // Enable simulation mode if the param is truthy or present
+        function isSimModeEnabledFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has('sim')) return false;
+            // simパラメータが存在すれば常にtrue（数値指定も含む）
+            return true;
+        }
+
+        // Get simulation iteration count from URL
+        function getSimIterationsFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.has('sim')) return 1000;
+            const raw = params.get('sim');
+            // 数値として解釈できる場合はその値を使用
+            const num = parseInt(raw, 10);
+            if (!isNaN(num) && num > 0) return num;
+            // それ以外はデフォルト1000回
+            return 1000;
         }
 
         const normalDescription = "あなたは簡素な通路にいる。\n壁はコンクリート打ちっぱなしだ。\n天井の蛍光灯が、ジー…という音を立てて白く光っている。";
@@ -1152,8 +1223,22 @@
         function initDebugMode() {
             if (isDebugEnabledFromURL()) {
                 isDebugMode = true;
+                debugToggleBtn.style.display = 'block';
                 debugInfo.style.display = 'block';
                 debugInfo.classList.add('active');
+
+                // トグルボタンのクリックイベント
+                debugToggleBtn.addEventListener('click', () => {
+                    if (debugInfo.classList.contains('hidden')) {
+                        debugInfo.classList.remove('hidden');
+                        debugInfo.style.display = 'block';
+                        debugToggleBtn.textContent = 'デバッグ非表示';
+                    } else {
+                        debugInfo.classList.add('hidden');
+                        debugInfo.style.display = 'none';
+                        debugToggleBtn.textContent = 'デバッグ表示';
+                    }
+                });
 
                 console.log('Initializing debug mode...');
 
@@ -1187,13 +1272,29 @@
                 // ヒントの内容でソート
                 anomaliesWithIndex.sort((a, b) => a.hint.localeCompare(b.hint, 'ja'));
 
-                // option要素を作成
-                anomaliesWithIndex.forEach((item, sortedIndex) => {
-                    const option = document.createElement('option');
-                    option.value = item.originalIndex;
-                    option.textContent = `[${item.originalIndex}] ${item.hint}`;
-                    selector.appendChild(option);
-                });
+                // option要素を作成（出現数付き）
+                function updateSelectorOptions() {
+                    // 既存のオプション（最初の「異変なし」以外）を削除
+                    while (selector.options.length > 1) {
+                        selector.remove(1);
+                    }
+
+                    // 各異変の出現数を取得して、オプションを再作成
+                    anomaliesWithIndex.forEach((item, sortedIndex) => {
+                        const option = document.createElement('option');
+                        option.value = item.originalIndex;
+                        const cls = item.anomaly.class || '(text-only)';
+                        const count = anomalyCountByClass.get(cls) || 0;
+                        option.textContent = `[${item.originalIndex}] ${item.hint} (${count}回)`;
+                        selector.appendChild(option);
+                    });
+                }
+
+                // 初回作成
+                updateSelectorOptions();
+
+                // updateDebugInfo実行時にドロップダウンも更新するため、グローバルに参照を保存
+                window.updateSelectorOptions = updateSelectorOptions;
 
                 // 脱出成功スクリーン表示ボタン
                 const successBtn = document.createElement('button');
@@ -1206,9 +1307,16 @@
                     fadeOverlay.classList.remove('is-active');
                 };
 
+                // デバッグ：異変カウントのリセットボタン
+                const resetCountBtn = document.createElement('button');
+                resetCountBtn.id = 'reset-counts-btn';
+                resetCountBtn.textContent = '異変カウントをリセット';
+                resetCountBtn.onclick = () => { resetAnomalyCounts(); updateDebugInfo(); };
+
                 debugInfo.innerHTML = '<h3>--- DEBUG MODE ---</h3><p>Loading...</p>';
                 debugInfo.appendChild(selector);
                 debugInfo.appendChild(successBtn);
+                debugInfo.appendChild(resetCountBtn);
 
                 console.log('Debug mode initialized');
             }
@@ -1233,14 +1341,23 @@
             <b>Passage:</b> ${currentPassage}<br>
             <b>Anomaly Active:</b> ${hasAnomaly}<br>
             <b>Description:</b> ${hintText}<br>
-            <b>Class:</b> ${currentAnomaly.class || 'なし'}
+            <b>Class:</b> ${currentAnomaly.class || 'なし'}<br>
+            <hr>
+            <b>Picks Total:</b> ${anomalyPickTotal} / <b>Distinct Seen:</b> ${anomalyCountByClass.size}<br>
         `;
 
             const selector = debugInfo.querySelector('#anomaly-selector');
             const successBtn = debugInfo.querySelector('#show-success-btn');
+            const resetCountBtn = debugInfo.querySelector('#reset-counts-btn');
             debugInfo.innerHTML = debugContent;
             if (selector) debugInfo.appendChild(selector);
             if (successBtn) debugInfo.appendChild(successBtn);
+            if (resetCountBtn) debugInfo.appendChild(resetCountBtn);
+
+            // ドロップダウンの出現数表示を更新
+            if (window.updateSelectorOptions) {
+                window.updateSelectorOptions();
+            }
         }
 
         function resetVisuals() {
@@ -1298,6 +1415,10 @@
                 } else {
                     wrapper.classList.add(currentAnomaly.class);
                 }
+            }
+            // Debug: record the pick when an anomaly is active
+            if (hasAnomaly) {
+                incAnomalyCount(currentAnomaly.class);
             }
             // Enable/disable cursor-avoid behavior dynamically
             avoidCursorActive = currentAnomaly.class === 'anomaly-buttons-avoid-cursor';
@@ -1579,14 +1700,117 @@
         forwardButton.addEventListener('click', () => { processTurn(false); });
         backButton.addEventListener('click', () => { processTurn(true); });
 
+        // シミュレーションモードの実装
+        function runSimulation() {
+            const iterations = getSimIterationsFromURL();
+
+            console.log('=== シミュレーションモード開始 ===');
+            console.log(`異変総数: ${anomalies.length}`);
+            console.log(`繰り返し回数: ${iterations}`);
+            console.log('');
+
+            // 各異変の出現回数をカウント
+            const pickCounts = new Map();
+
+            for (let i = 0; i < iterations; i++) {
+                console.log(`--- 第${i + 1}回シャッフル ---`);
+
+                // 実際のコードと同じ方法でシャッフル
+                const testArray = [...anomalies];
+                shuffleArray(testArray);
+
+                // 末尾10個を取得
+                const last10 = testArray.slice(-10);
+
+                console.log('末尾10個:');
+                last10.forEach((anomaly, idx) => {
+                    const key = anomaly.hint;
+                    const position = testArray.length - 10 + idx;
+                    console.log(`  [${position}] ${key}`);
+
+                    // カウント
+                    pickCounts.set(key, (pickCounts.get(key) || 0) + 1);
+                });
+                console.log('');
+            }
+
+            // 統計情報を表示
+            console.log('=== 統計結果 ===');
+            console.log(`総シャッフル回数: ${iterations}`);
+            console.log(`末尾10個 × ${iterations}回 = ${iterations * 10}回の選択機会`);
+            console.log('');
+
+            // 出現回数でソート
+            const sortedCounts = Array.from(pickCounts.entries())
+                .sort((a, b) => b[1] - a[1]);
+
+            console.log('各異変の出現回数（降順）:');
+            sortedCounts.forEach(([hint, count]) => {
+                const percentage = ((count / (iterations * 10)) * 100).toFixed(2);
+                console.log(`  ${count}回 (${percentage}%): ${hint}`);
+            });
+            console.log('');
+
+            // 理論値との比較
+            const expectedCount = (iterations * 10) / anomalies.length;
+            const expectedPercentage = ((10 / anomalies.length) * 100).toFixed(2);
+            console.log(`理論上の期待値: ${expectedCount.toFixed(2)}回 (${expectedPercentage}%)`);
+            console.log('');
+
+            // 偏りの検出
+            const maxCount = sortedCounts[0][1];
+            const minCount = sortedCounts[sortedCounts.length - 1][1];
+            const variance = maxCount - minCount;
+            console.log(`最大出現回数: ${maxCount}回`);
+            console.log(`最小出現回数: ${minCount}回`);
+            console.log(`分散: ${variance}回`);
+            console.log('');
+
+            // 出現回数0の異変
+            const neverPicked = anomalies.filter(a => !pickCounts.has(a.hint));
+            if (neverPicked.length > 0) {
+                console.log(`出現しなかった異変: ${neverPicked.length}個`);
+                neverPicked.forEach(a => {
+                    console.log(`  - ${a.hint}`);
+                });
+            } else {
+                console.log('全ての異変が少なくとも1回は出現しました');
+            }
+
+            console.log('');
+            console.log('=== シミュレーション完了 ===');
+
+            // 画面に結果を表示
+            wrapper.innerHTML = `
+                <div style="padding: 20px; text-align: left; font-family: monospace; font-size: 14px; max-height: 80vh; overflow-y: auto;">
+                    <h2 style="text-align: center; color: #e53935;">シミュレーション完了</h2>
+                    <p><strong>総シャッフル回数:</strong> ${iterations}回</p>
+                    <p><strong>総選択機会:</strong> ${iterations * 10}回</p>
+                    <p><strong>理論上の期待値:</strong> ${expectedCount.toFixed(2)}回 (${expectedPercentage}%)</p>
+                    <p><strong>最大出現回数:</strong> ${maxCount}回 (最頻: ${sortedCounts[0][0]})</p>
+                    <p><strong>最小出現回数:</strong> ${minCount}回</p>
+                    <p><strong>分散:</strong> ${variance}回</p>
+                    <p><strong>出現しなかった異変:</strong> ${neverPicked.length}個</p>
+                    <hr>
+                    <p style="color: #ffd700;">詳細はブラウザのコンソール（F12）を確認してください。</p>
+                </div>
+            `;
+        }
+
         initDebugMode();
         // Initialize hard/soft mode from URL
         isHardMode = isHardModeEnabledFromURL();
         isSoftMode = isSoftModeEnabledFromURL();
-        // NOTE: Do not shuffle the master `anomalies` array.
-        // Random selection uses `shuffledAnomalies` built from a copy in getNextAnomaly().
-        // Shuffling here breaks debug dropdown indices.
-        setupNewPassage();
+
+        // シミュレーションモードチェック
+        if (isSimModeEnabledFromURL()) {
+            runSimulation();
+        } else {
+            // NOTE: Do not shuffle the master `anomalies` array.
+            // Random selection uses `shuffledAnomalies` built from a copy in getNextAnomaly().
+            // Shuffling here breaks debug dropdown indices.
+            setupNewPassage();
+        }
     </script>
 
 </body>
