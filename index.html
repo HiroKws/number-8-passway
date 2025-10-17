@@ -646,6 +646,16 @@
             background: linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.2)), repeating-linear-gradient(135deg, #444, #444 10px, #555 10px, #555 20px);
         }
 
+        .anomaly-floor-steeper-angle .floor {
+            background: linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.2)),
+                repeating-linear-gradient(60deg, #444, #444 10px, #555 10px, #555 20px);
+        }
+
+        .anomaly-floor-wider-stripes .floor {
+            background: linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.2)),
+                repeating-linear-gradient(45deg, #444, #444 10px, #555 10px, #555 25px);
+        }
+
         .anomaly-puddle-red .puddle {
             display: block;
             background: rgba(150, 50, 50, 0.5);
@@ -673,6 +683,54 @@
 
         .anomaly-buttons-square button {
             border-radius: 0;
+        }
+
+        .anomaly-buttons-logic-swapped #forward-button,
+        .anomaly-buttons-logic-swapped #back-button {
+            position: relative;
+            color: transparent; /* Hide original text */
+        }
+
+        .anomaly-buttons-logic-swapped #forward-button::after {
+            content: '戻る'; /* "Back" text on the forward button */
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        .anomaly-buttons-logic-swapped #back-button::after {
+            content: '進む'; /* "Forward" text on the back button */
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        .anomaly-buttons-logic-swapped #forward-button,
+        .anomaly-buttons-logic-swapped #back-button {
+            position: relative;
+            color: transparent; /* Hide original text */
+        }
+
+        .anomaly-buttons-logic-swapped #forward-button::after {
+            content: '戻る'; /* "Back" text on the forward button */
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        .anomaly-buttons-logic-swapped #back-button::after {
+            content: '進む'; /* "Forward" text on the back button */
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
         }
 
         /* --- Added anomalies (request) --- */
@@ -713,7 +771,8 @@
             right: 8px;
             bottom: 6px;
             font-size: 28px;
-            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+            transform: rotate(15deg);
+            filter: drop-shadow(2px 4px 3px rgba(0, 0, 0, 0.5)) brightness(0.7);
             pointer-events: none;
         }
 
@@ -724,13 +783,89 @@
             left: 8px;
             bottom: 6px;
             font-size: 28px;
-            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+            transform: rotate(-15deg);
+            filter: drop-shadow(2px 4px 3px rgba(0, 0, 0, 0.5)) brightness(0.7);
             pointer-events: none;
+        }
+
+        /* Anomaly: Hand from floor */
+        #game-wrapper.anomaly-floor-hand::after {
+            content: '✋';
+            position: absolute;
+            bottom: 5%;
+            right: 15%;
+            font-size: 50px;
+            transform: rotate(-30deg);
+            z-index: 0;
+        }
+
+        /* Anomaly: Shadow hand from floor */
+        #game-wrapper.anomaly-floor-shadow-hand::after {
+            content: '✋';
+            position: absolute;
+            bottom: 5%;
+            right: 15%;
+            font-size: 60px;
+            color: #000;
+            opacity: 0.6;
+            transform: rotate(-30deg);
+            filter: blur(3px);
+            z-index: 0;
+        }
+
+        /* Anomaly: Bamboo shoot from floor */
+        #game-wrapper.anomaly-floor-bamboo::before {
+            content: '▲';
+            position: absolute;
+            bottom: 5%;
+            left: 15%;
+            font-size: 50px;
+            color: #D2B48C; /* Light brown */
+            transform: scaleY(1.5);
+            filter: blur(1px);
+            z-index: 0;
+        }
+
+        /* Anomaly: Mushroom from floor */
+        #game-wrapper.anomaly-floor-mushroom::before {
+            content: '🍄‍🟫';
+            position: absolute;
+            bottom: 5%;
+            left: 15%;
+            font-size: 50px;
+            z-index: 0;
+        }
+
+        /* Anomaly: Grass from floor */
+        #game-wrapper.anomaly-floor-grass::before {
+            content: '🌿';
+            position: absolute;
+            bottom: 5%;
+            left: 15%;
+            font-size: 50px;
+            z-index: 0;
+        }
+
+        /* Anomaly: W from floor */
+        #game-wrapper.anomaly-floor-w::before {
+            content: 'W';
+            position: absolute;
+            bottom: 5%;
+            left: 15%;
+            font-size: 50px;
+            font-weight: bold;
+            color: #fff;
+            z-index: 0;
         }
 
         /* 6. Poster text "安全弟一" */
         .anomaly-poster-safety-brother .poster::before {
             content: '安全弟一';
+        }
+
+        /* Poster text "安全安心" */
+        .anomaly-poster-safety-anshin .poster::before {
+            content: '安全安心';
         }
 
         /* 7. (Removed) Message ellipsis color black — deleted per request */
@@ -861,6 +996,45 @@
             animation: heartPulse 1.6s ease-in-out infinite;
         }
 
+        /* Body anomaly: diamond at browser top-right */
+        body.anomaly-body-diamond-topright::before {
+            content: '♦';
+            position: fixed;
+            top: 8px;
+            right: 10px;
+            font-size: 26px;
+            color: #ff5a77;
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        /* Body anomaly: spade at browser bottom-right */
+        body.anomaly-body-spade-bottomright::before {
+            content: '♠';
+            position: fixed;
+            bottom: 8px;
+            right: 10px;
+            font-size: 26px;
+            color: #444;
+            text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        /* Body anomaly: club at browser bottom-left */
+        body.anomaly-body-club-bottomleft::before {
+            content: '♣';
+            position: fixed;
+            bottom: 8px;
+            left: 10px;
+            font-size: 26px;
+            color: #444;
+            text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            z-index: 10000;
+        }
+
         @keyframes heartPulse {
             from {
                 transform: scale(1);
@@ -912,6 +1086,7 @@
         const debugToggleBtn = document.getElementById('debug-toggle-btn');
         // --- For anomaly #12: buttons avoid cursor ---
         let avoidCursorActive = false;
+        let buttonLogicSwapped = false;
         const buttons = () => Array.from(wrapper.querySelectorAll('.buttons button'));
         function resetButtonTransforms() {
             buttons().forEach(btn => { btn.style.transform = ''; });
@@ -1098,15 +1273,15 @@
             { desc: normalDescription, class: 'anomaly-text-color-strong', hint: '説明文の色がピンクだった' },
             { desc: normalDescription, class: 'anomaly-letter-spacing', hint: '説明文の文字間隔が広かった' },
             { desc: normalDescription, class: 'anomaly-title-color-strong', hint: '通路番号の色がオレンジだった' },
-            { desc: normalDescription, class: 'anomaly-sign-crooked', hint: '壁の案内板が傾いていた' },
-            { desc: normalDescription, class: 'anomaly-sign-garbled', hint: '案内板のフォントが違った' },
-            { desc: normalDescription, class: 'anomaly-sign-shadow', hint: '案内板の影が赤かった' },
-            { desc: normalDescription, class: 'anomaly-sign-blue', hint: '案内板の色が青かった' },
-            { desc: normalDescription, class: 'anomaly-poster-missing', hint: '壁の案内板がなかった' },
-            { desc: normalDescription, class: 'anomaly-sign-text-changed', hint: '案内板の文字が「入口」だった' },
+            { desc: normalDescription, class: 'anomaly-sign-crooked', hint: '非常口が傾いていた' },
+            { desc: normalDescription, class: 'anomaly-sign-garbled', hint: '非常口のフォントが違った' },
+            { desc: normalDescription, class: 'anomaly-sign-shadow', hint: '非常口の影が赤かった' },
+            { desc: normalDescription, class: 'anomaly-sign-blue', hint: '非常口の色が青かった' },
+            { desc: normalDescription, class: 'anomaly-poster-missing', hint: '左のポスターがなかった' },
+            { desc: normalDescription, class: 'anomaly-sign-text-changed', hint: '非常口の文字が「入口」だった' },
             { desc: normalDescription, class: 'anomaly-sign-text-mirrored', hint: '非常口の文字が鏡文字だった' },
-            { desc: normalDescription, class: 'anomaly-sign-dashed', hint: '案内板の枠線が点線だった' },
-            { desc: normalDescription, class: 'anomaly-sign-text-yellow', hint: '案内板の文字が黄色だった' },
+            { desc: normalDescription, class: 'anomaly-sign-dashed', hint: '非常口の枠線が点線だった' },
+            { desc: normalDescription, class: 'anomaly-sign-text-yellow', hint: '非常口の文字が黄色だった' },
             { desc: normalDescription, class: 'anomaly-sign-open', hint: '非常口のドアが開いていた' },
             { desc: normalDescription, class: 'anomaly-sign-peeking', hint: '非常口の上から誰かが見ていた' },
             { desc: normalDescription, class: 'anomaly-text-align-justify', hint: '説明文が両端揃えだった' },
@@ -1136,7 +1311,9 @@
             { desc: normalDescription, class: 'anomaly-poster-eye', hint: '左のポスターに目玉が表示されていた' },
             { desc: normalDescription, class: 'anomaly-text-upside-down', hint: '説明文が逆さまだった' },
             { desc: normalDescription, class: 'anomaly-text-mirrored', hint: '説明文が鏡文字だった' },
-            { desc: normalDescription, class: 'anomaly-floor-angle-changed', hint: '床の模様の角度が違った' },
+            { desc: normalDescription, class: 'anomaly-floor-angle-changed', hint: '床の模様の角度が逆だった' },
+            { desc: normalDescription, class: 'anomaly-floor-steeper-angle', hint: '床の斜線の角度が急だった' },
+            { desc: normalDescription, class: 'anomaly-floor-wider-stripes', hint: '床の模様の線の幅が均一ではなかった' },
             { desc: normalDescription, class: 'anomaly-puddle-red', hint: '床の水たまりが赤かった' },
             { desc: normalDescription, class: 'anomaly-title-shadow-green', hint: '通路番号の影が緑だった' },
             { desc: normalDescription, class: 'anomaly-buttons-glow', hint: 'ボタンが光っていた' },
@@ -1164,6 +1341,8 @@
             { desc: normalDescription, class: 'anomaly-trunks-bl', hint: '左下にトランクスが落ちていた' },
             // 6. 安全第一→安全弟一
             { desc: normalDescription, class: 'anomaly-poster-safety-brother', hint: 'ポスターの「安全第一」が「安全弟一」だった' },
+            // ポスターの「安全第一」が「安全安心」だった
+            { desc: normalDescription, class: 'anomaly-poster-safety-anshin', hint: 'ポスターの「安全第一」が「安全安心」だった' },
             // 8. 非常口が高い
             { desc: normalDescription, class: 'anomaly-sign-higher', hint: '非常口の位置が少し高かった' },
             // 8b. 非常口が低い
@@ -1187,7 +1366,17 @@
             // 16. URL表示欄に「がんばれー」
             { desc: normalDescription, class: 'anomaly-url-ganbare', hint: 'URLの表示欄に「がんばれー」と表示された' },
             // 17. ブラウザ左上にハート
-            { desc: normalDescription, class: 'anomaly-body-heart-topleft', hint: 'ブラウザの左上にハートが表示された' }
+            { desc: normalDescription, class: 'anomaly-body-heart-topleft', hint: 'ブラウザの左上にハートが表示された' },
+            { desc: normalDescription, class: 'anomaly-body-diamond-topright', hint: 'ブラウザの右上にダイヤが表示されていた' },
+            { desc: normalDescription, class: 'anomaly-body-spade-bottomright', hint: 'ブラウザの右下にスペードが表示されていた' },
+            { desc: normalDescription, class: 'anomaly-body-club-bottomleft', hint: 'ブラウザの左下にクラブが表示されていた' },
+            { desc: normalDescription, class: 'anomaly-floor-hand', hint: '床から手が生えていた' },
+            { desc: normalDescription, class: 'anomaly-floor-shadow-hand', hint: '床から影の手が湧き上がっていた' },
+            { desc: normalDescription, class: 'anomaly-floor-bamboo', hint: '床からたけのこが生えていた' },
+            { desc: normalDescription, class: 'anomaly-floor-mushroom', hint: '床からきのこが生えていた' },
+            { desc: normalDescription, class: 'anomaly-floor-grass', hint: '床から草が生えていた' },
+            { desc: normalDescription, class: 'anomaly-floor-w', hint: '床からWの文字が生えていた' },
+            { desc: normalDescription, class: 'anomaly-buttons-logic-swapped', hint: '進むボタンと戻るボタンの文字が逆だった' }
         ];
 
         // Use crypto-backed randomness to avoid repetitive patterns across reloads
@@ -1383,6 +1572,8 @@
             // reset button drift (for avoid-cursor anomaly)
             avoidCursorActive = false;
             resetButtonTransforms();
+            // reset logic swap state
+            buttonLogicSwapped = false;
             // reset dim-on-leave state
             dimOnLeaveActive = false;
             wrapper.classList.remove('is-dimmed');
@@ -1416,6 +1607,8 @@
                     wrapper.classList.add(currentAnomaly.class);
                 }
             }
+            // Enable/disable logic swap based on anomaly
+            buttonLogicSwapped = currentAnomaly.class === 'anomaly-buttons-logic-swapped';
             // Debug: record the pick when an anomaly is active
             if (hasAnomaly) {
                 incAnomalyCount(currentAnomaly.class);
@@ -1697,8 +1890,9 @@
             updateDebugInfo();
         }
 
-        forwardButton.addEventListener('click', () => { processTurn(false); });
-        backButton.addEventListener('click', () => { processTurn(true); });
+        // When the logic-swapped anomaly is active, swap the decision mapping
+        forwardButton.addEventListener('click', () => { processTurn(buttonLogicSwapped ? true : false); });
+        backButton.addEventListener('click', () => { processTurn(buttonLogicSwapped ? false : true); });
 
         // シミュレーションモードの実装
         function runSimulation() {
