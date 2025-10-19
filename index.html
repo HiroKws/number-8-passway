@@ -1061,7 +1061,7 @@
         }
 
         /* --- スマートフォン対応 --- */
-        @media (max-width: 600px) {
+        @media (max-width: 800px) {
             body {
                 align-items: flex-start;
                 /* 上寄せに変更 */
@@ -1503,7 +1503,7 @@
                 let availableAnomalies = [...anomalies];
 
                 // スマートフォン（狭い画面）向けの調整
-                if (window.innerWidth <= 600) {
+                if (window.innerWidth <= 800) {
                     availableAnomalies = availableAnomalies.filter(anomaly =>
                         !mobileUnfriendlyAnomalies.includes(anomaly.hint)
                     );
