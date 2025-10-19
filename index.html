@@ -165,7 +165,8 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 25%;
+            height: 19%;
+            /* 3/4 of original 25% */
             z-index: -1;
             background:
                 linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.2)),
@@ -1058,6 +1059,86 @@
                 transform: scale(1);
             }
         }
+
+        /* --- スマートフォン対応 --- */
+        @media (max-width: 600px) {
+            body {
+                align-items: flex-start;
+                /* 上寄せに変更 */
+                padding-top: 2vh;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .game-wrapper {
+                width: 95%;
+                padding: 20px 15px;
+                height: auto;
+                min-height: 90vh;
+                /* 高さを確保 */
+                max-height: 1200px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 2.3em;
+                margin-bottom: 20px;
+                /* タイトル下のスペース */
+                margin-top: 35px;
+                /* 蛍光灯のためのスペース */
+            }
+
+            #description {
+                font-size: 1.1em;
+                min-height: 25vh;
+                /* 説明文の最小の高さを確保 */
+                margin-bottom: 20px;
+                white-space: pre-wrap;
+                /* スマホでは折り返し */
+                overflow-x: hidden;
+            }
+
+            .buttons {
+                flex-direction: column;
+                gap: 12px;
+                margin-top: auto;
+                /* ボタンを一番下に配置 */
+                margin-bottom: 35px;
+                /* ボタン半個分、さらに上に移動 */
+                position: relative;
+                /* z-indexを有効にするため */
+                z-index: 10;
+                /* ポスター等より手前に */
+            }
+
+            button {
+                width: 100%;
+                padding: 15px;
+                font-size: 1.1em;
+            }
+
+            .ceiling-light {
+                width: 70%;
+                height: 30px;
+            }
+
+            .wall-sign {
+                top: 53%;
+                /* さらに少し上に移動 */
+                right: 5px;
+                transform: translateY(-50%) perspective(120px) rotateY(-30deg) scale(0.9);
+                /* さらに大きく */
+            }
+
+            .poster {
+                top: 53%;
+                /* さらに少し上に移動 */
+                left: 5px;
+                transform: translateY(-50%) perspective(120px) rotateY(25deg) scale(0.9);
+                /* さらに大きく */
+            }
+        }
     </style>
 </head>
 
@@ -1409,10 +1490,32 @@
             }
         }
 
+        const mobileUnfriendlyAnomalies = [
+            'ゲーム画面外にカーソルで画面が暗くなった',
+            'ブラウザの左上にハートが表示された',
+            'ブラウザの右上にダイヤが表示されていた',
+            'ブラウザの右下にスペードが表示されていた',
+            'ブラウザの左下にクラブが表示されていた'
+        ];
+
         function getNextAnomaly() {
             if (shuffledAnomalies.length === 0) {
-                shuffledAnomalies = [...anomalies];
+                let availableAnomalies = [...anomalies];
+
+                // スマートフォン（狭い画面）向けの調整
+                if (window.innerWidth <= 600) {
+                    availableAnomalies = availableAnomalies.filter(anomaly =>
+                        !mobileUnfriendlyAnomalies.includes(anomaly.hint)
+                    );
+                }
+
+                shuffledAnomalies = availableAnomalies;
                 shuffleArray(shuffledAnomalies);
+            }
+            // リストが空（すべての異変が除外されたなど）の場合、安全なフォールバック
+            if (shuffledAnomalies.length === 0) {
+                console.warn("No available anomalies to choose from. Using a default safe anomaly.");
+                return { desc: normalDescription, class: 'anomaly-light-red', hint: '天井の照明が赤かった' };
             }
             return shuffledAnomalies.pop();
         }
