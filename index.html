@@ -239,7 +239,8 @@
             font-size: 1.2em;
             color: var(--message-color);
             font-weight: bold;
-            height: 30px;
+            min-height: 30px;
+            height: auto;
             transition: opacity 0.5s, color 0.5s, border 0.5s;
             box-sizing: border-box;
         }
@@ -1094,9 +1095,43 @@
                 min-height: 25vh;
                 /* 説明文の最小の高さを確保 */
                 margin-bottom: 20px;
-                white-space: pre-wrap;
-                /* スマホでは折り返し */
-                overflow-x: hidden;
+                white-space: pre !important;
+                /* スクロール可能にするため折り返さない */
+                overflow-x: auto;
+                /* 横スクロールを有効化 */
+                cursor: grab;
+                /* ドラッグ可能を示すカーソル */
+                min-width: 0;
+                /* flexアイテムのオーバーフロー防止 */
+            }
+
+            #description:active {
+                cursor: grabbing;
+            }
+
+            #message {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: rgba(0, 0, 0, 0.85);
+                padding: 20px;
+                border-radius: 10px;
+                z-index: 10001;
+                width: 80%;
+                max-width: 400px;
+                text-align: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.5s ease-in-out;
+                /* Resetting desktop styles */
+                margin-top: 0;
+                min-height: 0;
+            }
+
+            #message.is-shown {
+                opacity: 1;
+                pointer-events: auto;
             }
 
             .buttons {
@@ -1104,8 +1139,8 @@
                 gap: 12px;
                 margin-top: auto;
                 /* ボタンを一番下に配置 */
-                margin-bottom: 35px;
-                /* ボタン半個分、さらに上に移動 */
+                margin-bottom: 85px;
+                /* ボタン１つ分、さらに上に移動 */
                 position: relative;
                 /* z-indexを有効にするため */
                 z-index: 10;
@@ -1495,7 +1530,12 @@
             'ブラウザの左上にハートが表示された',
             'ブラウザの右上にダイヤが表示されていた',
             'ブラウザの右下にスペードが表示されていた',
-            'ブラウザの左下にクラブが表示されていた'
+            'ブラウザの左下にクラブが表示されていた',
+            '全体の枠線の色が紫だった',
+            '全体の枠線の色が緑だった',
+            '全体の枠線の色が青だった',
+            '全体の枠が丸まっていた',
+            'URLの表示欄に「がんばれー」と表示された'
         ];
 
         function getNextAnomaly() {
@@ -1588,6 +1628,12 @@
                         const cls = item.anomaly.class || '(text-only)';
                         const count = anomalyCountByClass.get(cls) || 0;
                         option.textContent = `[${item.originalIndex}] ${item.hint} (${count}回)`;
+
+                        // スマホで無効化される異変の色を変える
+                        if (window.innerWidth <= 800 && mobileUnfriendlyAnomalies.includes(item.hint)) {
+                            option.style.color = '#888';
+                        }
+
                         selector.appendChild(option);
                     });
                 }
@@ -1772,7 +1818,7 @@
 
             currentAnomaly = {};
             // Clear transient message so '...' does not remain when nothing to show
-            message.textContent = '';
+            showMessage('');
 
             if (isFirstTurn) {
                 hasAnomaly = false;
@@ -1792,13 +1838,13 @@
 
             // In normal mode, if a pending message exists when returning to 0, show the cause.
             if (!isHardMode && currentPassage === 0 && pendingReturnMessage) {
-                message.textContent = pendingReturnMessage;
+                showMessage(pendingReturnMessage);
                 pendingReturnMessage = '';
             }
 
             // In soft mode, after a correct detection on previous turn, show the anomaly content
             if (isSoftMode && currentPassage > 0 && pendingProceedMessage) {
-                message.textContent = pendingProceedMessage;
+                showMessage(pendingProceedMessage);
                 pendingProceedMessage = '';
             }
         }
@@ -1828,7 +1874,7 @@
                     if (isSoftMode && hasAnomaly && currentAnomaly && currentAnomaly.hint) {
                         pendingProceedMessage = `異変: ${currentAnomaly.hint}`;
                     }
-                    message.textContent = '...';
+                    showMessage('...');
                     if (currentPassage < 8) {
                         currentPassage++;
                     }
@@ -2003,121 +2049,87 @@
             updateDebugInfo();
         }
 
-        // When the logic-swapped anomaly is active, swap the decision mapping
-        forwardButton.addEventListener('click', () => { processTurn(buttonLogicSwapped ? true : false); });
-        backButton.addEventListener('click', () => { processTurn(buttonLogicSwapped ? false : true); });
+        // --- Description drag-to-scroll for mobile ---
+        const descriptionElement = document.getElementById('description');
+        let isDragging = false;
+        let startX;
+        let scrollLeft;
 
-        // シミュレーションモードの実装
-        function runSimulation() {
-            const iterations = getSimIterationsFromURL();
+        const startDragging = (e) => {
+            if (window.innerWidth > 800) return;
+            isDragging = true;
+            const pageX = e.pageX || e.touches[0].pageX;
+            startX = pageX - descriptionElement.offsetLeft;
+            scrollLeft = descriptionElement.scrollLeft;
+            descriptionElement.style.cursor = 'grabbing';
+        };
 
-            console.log('=== シミュレーションモード開始 ===');
-            console.log(`異変総数: ${anomalies.length}`);
-            console.log(`繰り返し回数: ${iterations}`);
-            console.log('');
+        const stopDragging = () => {
+            if (window.innerWidth > 800) return;
+            isDragging = false;
+            descriptionElement.style.cursor = 'grab';
+        };
 
-            // 各異変の出現回数をカウント
-            const pickCounts = new Map();
+        const drag = (e) => {
+            if (!isDragging || window.innerWidth > 800) return;
+            e.preventDefault();
+            const pageX = e.pageX || e.touches[0].pageX;
+            const x = pageX - descriptionElement.offsetLeft;
+            const walk = (x - startX) * 1.5; // Adjust scroll speed
+            descriptionElement.scrollLeft = scrollLeft - walk;
+        };
 
-            for (let i = 0; i < iterations; i++) {
-                console.log(`--- 第${i + 1}回シャッフル ---`);
+        descriptionElement.addEventListener('mousedown', startDragging);
+        descriptionElement.addEventListener('mouseleave', stopDragging);
+        descriptionElement.addEventListener('mouseup', stopDragging);
+        descriptionElement.addEventListener('mousemove', drag);
 
-                // 実際のコードと同じ方法でシャッフル
-                const testArray = [...anomalies];
-                shuffleArray(testArray);
+        descriptionElement.addEventListener('touchstart', startDragging, { passive: true });
+        descriptionElement.addEventListener('touchend', stopDragging);
+        descriptionElement.addEventListener('touchmove', drag, { passive: false });
 
-                // 末尾10個を取得
-                const last10 = testArray.slice(-10);
+        let messageTimeout;
 
-                console.log('末尾10個:');
-                last10.forEach((anomaly, idx) => {
-                    const key = anomaly.hint;
-                    const position = testArray.length - 10 + idx;
-                    console.log(`  [${position}] ${key}`);
-
-                    // カウント
-                    pickCounts.set(key, (pickCounts.get(key) || 0) + 1);
-                });
-                console.log('');
+        function showMessage(text) {
+            if (!text) {
+                message.textContent = '';
+                if (window.innerWidth <= 800) {
+                    message.classList.remove('is-shown');
+                }
+                return;
             }
 
-            // 統計情報を表示
-            console.log('=== 統計結果 ===');
-            console.log(`総シャッフル回数: ${iterations}`);
-            console.log(`末尾10個 × ${iterations}回 = ${iterations * 10}回の選択機会`);
-            console.log('');
-
-            // 出現回数でソート
-            const sortedCounts = Array.from(pickCounts.entries())
-                .sort((a, b) => b[1] - a[1]);
-
-            console.log('各異変の出現回数（降順）:');
-            sortedCounts.forEach(([hint, count]) => {
-                const percentage = ((count / (iterations * 10)) * 100).toFixed(2);
-                console.log(`  ${count}回 (${percentage}%): ${hint}`);
-            });
-            console.log('');
-
-            // 理論値との比較
-            const expectedCount = (iterations * 10) / anomalies.length;
-            const expectedPercentage = ((10 / anomalies.length) * 100).toFixed(2);
-            console.log(`理論上の期待値: ${expectedCount.toFixed(2)}回 (${expectedPercentage}%)`);
-            console.log('');
-
-            // 偏りの検出
-            const maxCount = sortedCounts[0][1];
-            const minCount = sortedCounts[sortedCounts.length - 1][1];
-            const variance = maxCount - minCount;
-            console.log(`最大出現回数: ${maxCount}回`);
-            console.log(`最小出現回数: ${minCount}回`);
-            console.log(`分散: ${variance}回`);
-            console.log('');
-
-            // 出現回数0の異変
-            const neverPicked = anomalies.filter(a => !pickCounts.has(a.hint));
-            if (neverPicked.length > 0) {
-                console.log(`出現しなかった異変: ${neverPicked.length}個`);
-                neverPicked.forEach(a => {
-                    console.log(`  - ${a.hint}`);
-                });
+            if (window.innerWidth <= 800) {
+                clearTimeout(messageTimeout);
+                message.textContent = text;
+                message.classList.add('is-shown');
+                messageTimeout = setTimeout(() => {
+                    message.classList.remove('is-shown');
+                }, 4000);
             } else {
-                console.log('全ての異変が少なくとも1回は出現しました');
+                message.textContent = text;
             }
-
-            console.log('');
-            console.log('=== シミュレーション完了 ===');
-
-            // 画面に結果を表示
-            wrapper.innerHTML = `
-                <div style="padding: 20px; text-align: left; font-family: monospace; font-size: 14px; max-height: 80vh; overflow-y: auto;">
-                    <h2 style="text-align: center; color: #e53935;">シミュレーション完了</h2>
-                    <p><strong>総シャッフル回数:</strong> ${iterations}回</p>
-                    <p><strong>総選択機会:</strong> ${iterations * 10}回</p>
-                    <p><strong>理論上の期待値:</strong> ${expectedCount.toFixed(2)}回 (${expectedPercentage}%)</p>
-                    <p><strong>最大出現回数:</strong> ${maxCount}回 (最頻: ${sortedCounts[0][0]})</p>
-                    <p><strong>最小出現回数:</strong> ${minCount}回</p>
-                    <p><strong>分散:</strong> ${variance}回</p>
-                    <p><strong>出現しなかった異変:</strong> ${neverPicked.length}個</p>
-                    <hr>
-                    <p style="color: #ffd700;">詳細はブラウザのコンソール（F12）を確認してください。</p>
-                </div>
-            `;
         }
 
-        initDebugMode();
-        // Initialize hard/soft mode from URL
-        isHardMode = isHardModeEnabledFromURL();
-        isSoftMode = isSoftModeEnabledFromURL();
+        function init() {
+            initDebugMode();
+            // Initialize hard/soft mode from URL
+            isHardMode = isHardModeEnabledFromURL();
+            isSoftMode = isSoftModeEnabledFromURL();
 
-        // シミュレーションモードチェック
-        if (isSimModeEnabledFromURL()) {
-            runSimulation();
-        } else {
-            // NOTE: Do not shuffle the master `anomalies` array.
-            // Random selection uses `shuffledAnomalies` built from a copy in getNextAnomaly().
-            // Shuffling here breaks debug dropdown indices.
-            setupNewPassage();
+            // シミュレーションモードチェック
+            if (isSimModeEnabledFromURL()) {
+                runSimulation();
+            } else {
+                // Event listeners for buttons
+                forwardButton.addEventListener('click', () => processTurn(buttonLogicSwapped ? true : false));
+                backButton.addEventListener('click', () => processTurn(buttonLogicSwapped ? false : true));
+
+                setupNewPassage();
+            }
         }
+
+        init();
     </script>
 
 </body>
